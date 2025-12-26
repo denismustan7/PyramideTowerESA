@@ -34,6 +34,121 @@ interface RoomPlayer {
 
 const rooms = new Map<string, Room>();
 const playerToRoom = new Map<string, string>();
+const roundTimers = new Map<string, NodeJS.Timeout>();
+
+// Force round end if not all players have finished after timeout
+function forceRoundEnd(roomCode: string) {
+  const room = rooms.get(roomCode);
+  if (!room || room.status !== 'playing') return;
+  
+  console.log(`[Server] Force ending round ${room.currentRound} for room ${roomCode}`);
+  
+  // Mark all active players as finished if they haven't already
+  const activePlayers = getActivePlayers(room);
+  for (const player of activePlayers) {
+    if (!player.finished) {
+      // Add current score to total score before marking finished
+      player.totalScore += player.score;
+      player.finished = true;
+      
+      // Broadcast that this player has finished to keep clients in sync
+      broadcastToRoom(room, {
+        type: 'player_finished',
+        payload: {
+          playerId: player.id,
+          playerName: player.name,
+          score: player.score,
+          finishReason: 'time'
+        }
+      });
+    }
+  }
+  
+  room.status = 'round_end';
+  
+  // Check for elimination
+  const eliminatedPlayer = checkAndEliminatePlayer(room);
+  
+  if (eliminatedPlayer) {
+    broadcastToRoom(room, {
+      type: 'player_eliminated',
+      payload: {
+        playerId: eliminatedPlayer.id,
+        playerName: eliminatedPlayer.name,
+        round: room.currentRound,
+        totalScore: eliminatedPlayer.totalScore
+      }
+    });
+  }
+
+  // Check if game is over
+  if (checkGameOver(room)) {
+    room.status = 'finished';
+    const ranking = Array.from(room.players.values())
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        totalScore: p.totalScore,
+        isEliminated: p.isEliminated,
+        eliminatedInRound: p.eliminatedInRound
+      }));
+
+    broadcastToRoom(room, {
+      type: 'game_over',
+      payload: { ranking }
+    });
+  } else {
+    // Send round end to all players
+    const standings = Array.from(room.players.values())
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        score: p.score,
+        totalScore: p.totalScore,
+        isEliminated: p.isEliminated,
+        eliminatedInRound: p.eliminatedInRound
+      }));
+
+    broadcastToRoom(room, {
+      type: 'round_end',
+      payload: {
+        round: room.currentRound,
+        standings,
+        nextRound: room.currentRound + 1,
+        nextRoundTime: getRoundTime(room.currentRound + 1, room.playerCount),
+        eliminatedId: eliminatedPlayer?.id || null,
+        eliminatedName: eliminatedPlayer?.name || null
+      }
+    });
+  }
+}
+
+function startRoundTimer(roomCode: string, timeLimit: number) {
+  // Clear any existing timer
+  const existingTimer = roundTimers.get(roomCode);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  
+  // Add 3 second grace period for network latency
+  const timeout = setTimeout(() => {
+    forceRoundEnd(roomCode);
+    roundTimers.delete(roomCode);
+  }, (timeLimit + 3) * 1000);
+  
+  roundTimers.set(roomCode, timeout);
+}
+
+function clearRoundTimer(roomCode: string) {
+  const timer = roundTimers.get(roomCode);
+  if (timer) {
+    clearTimeout(timer);
+    roundTimers.delete(roomCode);
+  }
+}
 
 function generateRoomCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -378,6 +493,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 }));
               }
             }
+            
+            // Start server-side round timer as backup
+            startRoundTimer(room.code, room.roundTimeLimit);
           }
         }
         break;
@@ -411,6 +529,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               const allFinished = activePlayers.every(p => p.finished);
 
               if (allFinished) {
+                // Clear the server-side timer since all finished
+                clearRoundTimer(currentRoomCode);
+                
                 room.status = 'round_end';
                 
                 // Check for elimination
@@ -544,6 +665,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                     }));
                   }
                 }
+                
+                // Start server-side round timer as backup
+                startRoundTimer(room.code, room.roundTimeLimit);
               }
             }
           }
