@@ -5,7 +5,7 @@ import type { Card, Suit } from "@shared/schema";
 interface PlayingCardProps {
   card: Card;
   isPlayable?: boolean;
-  isHighlighted?: boolean;
+  isCovered?: boolean;
   isShaking?: boolean;
   onClick?: () => void;
   size?: 'sm' | 'md' | 'lg';
@@ -19,83 +19,92 @@ const suitSymbols: Record<Suit, string> = {
 };
 
 const suitColors: Record<Suit, string> = {
-  hearts: 'text-red-500',
-  diamonds: 'text-red-500',
+  hearts: 'text-red-600',
+  diamonds: 'text-red-600',
   clubs: 'text-gray-900',
   spades: 'text-gray-900',
 };
 
 const sizeClasses = {
-  sm: 'w-10 h-14 text-sm',
-  md: 'w-14 h-20 text-lg',
-  lg: 'w-16 h-24 text-xl',
+  sm: 'w-12 h-16',
+  md: 'w-16 h-22',
+  lg: 'w-20 h-28',
+};
+
+const valueSizes = {
+  sm: 'text-xl',
+  md: 'text-2xl',
+  lg: 'text-3xl',
+};
+
+const suitSizes = {
+  sm: 'text-lg',
+  md: 'text-xl',
+  lg: 'text-2xl',
 };
 
 export function PlayingCard({ 
   card, 
   isPlayable = false, 
-  isHighlighted = false,
+  isCovered = false,
   isShaking = false,
   onClick,
   size = 'md'
 }: PlayingCardProps) {
   
   if (!card.isFaceUp) {
-    // Card back
     return (
       <motion.div
         className={cn(
           sizeClasses[size],
-          "rounded-md border-2 border-amber-500/40 bg-[#0B1D3C] flex items-center justify-center",
-          "shadow-lg"
+          "rounded-lg bg-gradient-to-br from-[#0B1D3C] to-[#051026]",
+          "border-2 border-amber-500/60",
+          "shadow-lg shadow-black/50",
+          "flex items-center justify-center relative overflow-hidden"
         )}
         initial={{ rotateY: 180 }}
         animate={{ rotateY: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="w-3/4 h-3/4 border border-amber-500/30 rounded flex items-center justify-center">
-          <span className="text-amber-500/60 text-xs">MT</span>
+        <div className="absolute inset-1 border border-amber-500/30 rounded-md" />
+        <div className="absolute inset-2 border border-amber-500/20 rounded" />
+        <div className="w-8 h-8 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="w-6 h-6 text-amber-500/70">
+            <path 
+              fill="currentColor" 
+              d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
+            />
+          </svg>
         </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-transparent" />
       </motion.div>
     );
   }
 
-  // Card face
   return (
     <motion.button
       className={cn(
         sizeClasses[size],
-        "rounded-md border-2 bg-white flex flex-col items-center justify-center relative",
-        "shadow-lg transition-all duration-150",
-        isPlayable ? "cursor-pointer" : "cursor-default",
-        isHighlighted 
-          ? "border-cyan-400 shadow-cyan-400/50 shadow-lg ring-2 ring-cyan-400/50" 
-          : "border-amber-500/30",
-        !card.isPlayable && "opacity-50 grayscale",
+        "rounded-lg bg-white border-2",
+        "shadow-lg shadow-black/40",
+        "flex flex-col items-center justify-center relative",
+        "transition-all duration-150",
+        isPlayable && !isCovered ? "cursor-pointer border-gray-200" : "cursor-default border-gray-300",
+        isCovered && "brightness-50",
+        !card.isPlayable && "opacity-60 brightness-75",
         suitColors[card.suit]
       )}
-      onClick={isPlayable ? onClick : undefined}
+      onClick={isPlayable && !isCovered ? onClick : undefined}
       animate={isShaking ? {
         x: [0, -5, 5, -5, 5, 0],
         transition: { duration: 0.3 }
       } : {}}
-      whileHover={isPlayable ? { scale: 1.05, y: -4 } : {}}
-      whileTap={isPlayable ? { scale: 0.95 } : {}}
+      whileHover={isPlayable && !isCovered ? { scale: 1.08, y: -6 } : {}}
+      whileTap={isPlayable && !isCovered ? { scale: 0.95 } : {}}
       data-testid={`card-${card.id}`}
     >
-      {/* Value */}
-      <span className="font-bold leading-none">{card.value}</span>
-      {/* Suit */}
-      <span className="text-xs leading-none">{suitSymbols[card.suit]}</span>
-      
-      {/* Highlight glow */}
-      {isHighlighted && (
-        <motion.div
-          className="absolute inset-0 rounded-md bg-cyan-400/20"
-          animate={{ opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        />
-      )}
+      <span className={cn("font-bold leading-none", valueSizes[size])}>{card.value}</span>
+      <span className={cn("leading-none mt-0.5", suitSizes[size])}>{suitSymbols[card.suit]}</span>
     </motion.button>
   );
 }

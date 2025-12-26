@@ -188,6 +188,11 @@ export function initGame(level: number = 1, seed?: number): GameState {
   };
 }
 
+// Initialize a new game with a specific seed (for multiplayer)
+export function initGameWithSeed(level: number, seed: number): GameState {
+  return initGame(level, seed);
+}
+
 // Get all playable cards from pyramids
 export function getPlayableCards(gameState: GameState): Card[] {
   const playable: Card[] = [];

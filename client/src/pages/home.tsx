@@ -1,36 +1,89 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Play, Trophy, HelpCircle, X } from "lucide-react";
+import { Play, Trophy, HelpCircle, Users, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LeaderboardModal } from "@/components/game/leaderboard-modal";
+
+function MagicalParticles() {
+  const particles = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 5,
+    duration: 4 + Math.random() * 4,
+    size: 2 + Math.random() * 2,
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.size,
+            background: `radial-gradient(circle, rgba(34, 211, 238, 0.5), transparent)`,
+          }}
+          initial={{ bottom: -20, opacity: 0 }}
+          animate={{
+            bottom: ['0%', '100%'],
+            opacity: [0, 0.6, 0],
+            x: [0, Math.random() * 30 - 15],
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showRules, setShowRules] = useState(false);
 
-  const handlePlay = () => {
+  const handleSoloPlay = () => {
     setLocation("/game");
   };
 
+  const handleMultiplayer = () => {
+    setLocation("/lobby");
+  };
+
   return (
-    <div className="min-h-screen bg-[#050a0f] flex flex-col items-center justify-center p-4 overflow-hidden">
-      {/* Background effects */}
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden relative"
+      style={{ 
+        background: 'radial-gradient(ellipse at center, #001428 0%, #000814 50%, #000510 100%)'
+      }}
+    >
+      <MagicalParticles />
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+        <div 
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(34, 211, 238, 0.1), transparent)' }}
+        />
+        <div 
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(212, 175, 55, 0.1), transparent)' }}
+        />
       </div>
 
-      {/* Main Content */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 flex flex-col items-center gap-8 max-w-md w-full"
       >
-        {/* Logo/Title */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -41,7 +94,7 @@ export default function HomePage() {
             className="text-5xl font-bold mb-2"
             style={{ 
               color: '#D4AF37',
-              textShadow: '0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.3)'
+              textShadow: '0 0 30px rgba(212, 175, 55, 0.6), 0 0 60px rgba(212, 175, 55, 0.3)'
             }}
             data-testid="text-title"
           >
@@ -50,7 +103,6 @@ export default function HomePage() {
           <p className="text-gray-400 text-lg">Tri-Peaks Solitaire</p>
         </motion.div>
 
-        {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -59,20 +111,32 @@ export default function HomePage() {
         >
           <Button
             size="lg"
-            onClick={handlePlay}
+            onClick={handleSoloPlay}
             className="w-full h-16 text-xl font-bold bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white border-2 border-amber-400/50"
-            data-testid="button-play"
+            style={{ boxShadow: '0 0 20px rgba(212, 175, 55, 0.3)' }}
+            data-testid="button-solo"
           >
-            <Play className="w-6 h-6 mr-2" />
-            Spielen
+            <User className="w-6 h-6 mr-2" />
+            Solo Spiel
           </Button>
 
-          <div className="flex gap-4">
+          <Button
+            size="lg"
+            onClick={handleMultiplayer}
+            className="w-full h-16 text-xl font-bold bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white border-2 border-cyan-400/50"
+            style={{ boxShadow: '0 0 20px rgba(34, 211, 238, 0.3)' }}
+            data-testid="button-multiplayer"
+          >
+            <Users className="w-6 h-6 mr-2" />
+            Multiplayer
+          </Button>
+
+          <div className="flex gap-4 mt-2">
             <Button
               variant="outline"
               size="lg"
               onClick={() => setShowLeaderboard(true)}
-              className="flex-1 h-12 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              className="flex-1 h-12 border-amber-500/40 text-amber-400 hover:bg-amber-500/10 bg-amber-500/5"
               data-testid="button-leaderboard"
             >
               <Trophy className="w-5 h-5 mr-2" />
@@ -84,16 +148,24 @@ export default function HomePage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="flex-1 h-12 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+                  className="flex-1 h-12 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 bg-cyan-500/5"
                   data-testid="button-rules"
                 >
                   <HelpCircle className="w-5 h-5 mr-2" />
                   Regeln
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-[#0a0e14] border-amber-500/30 max-w-lg">
+              <DialogContent 
+                className="max-w-lg border-amber-500/30"
+                style={{ background: 'linear-gradient(to bottom, #001020, #000814)' }}
+              >
                 <DialogHeader>
-                  <DialogTitle className="text-amber-400 text-xl">Spielregeln</DialogTitle>
+                  <DialogTitle 
+                    className="text-xl"
+                    style={{ color: '#D4AF37' }}
+                  >
+                    Spielregeln
+                  </DialogTitle>
                 </DialogHeader>
                 <div className="text-gray-300 space-y-4">
                   <section>
@@ -119,7 +191,6 @@ export default function HomePage() {
                       <li>Combo-Multiplikator: Jede Karte ohne Ziehen erhoht den Multiplikator</li>
                       <li>Turm-Bonus: Extra Punkte fur jeden geleerten Turm</li>
                       <li>Zeit-Bonus: Restzeit wird in Punkte umgewandelt</li>
-                      <li>Perfekt-Bonus: Alle Karten ohne leeren Stapel = massive Bonuspunkte</li>
                     </ul>
                   </section>
                 </div>
@@ -128,14 +199,16 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* Rank Info Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
           className="w-full"
         >
-          <Card className="bg-[#0a0e14]/80 border-amber-500/20">
+          <Card 
+            className="border-amber-500/20"
+            style={{ background: 'rgba(0, 20, 40, 0.8)' }}
+          >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-amber-400/80">Range</CardTitle>
             </CardHeader>
@@ -165,7 +238,6 @@ export default function HomePage() {
         </motion.div>
       </motion.div>
 
-      {/* Leaderboard Modal */}
       <LeaderboardModal 
         isOpen={showLeaderboard} 
         onClose={() => setShowLeaderboard(false)} 

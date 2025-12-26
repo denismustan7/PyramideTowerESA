@@ -114,3 +114,46 @@ export const PERFECT_BONUS = 5000;
 export const TIME_BONUS_MULTIPLIER = 10;
 export const BASE_TIME = 120; // 2 minutes base time
 export const TIME_DECREASE_PER_LEVEL = 5;
+
+// Multiplayer types
+export interface MultiplayerPlayer {
+  id: string;
+  name: string;
+  score: number;
+  cardsRemaining: number;
+  isReady: boolean;
+  isHost: boolean;
+  finished: boolean;
+}
+
+export interface MultiplayerRoom {
+  code: string;
+  players: MultiplayerPlayer[];
+  gameSeed: number | null;
+  status: 'waiting' | 'playing' | 'finished';
+  maxPlayers: number;
+  createdAt: number;
+}
+
+export interface MultiplayerGameState extends GameState {
+  roomCode: string;
+  playerId: string;
+  opponents: MultiplayerPlayer[];
+}
+
+// WebSocket message types
+export type WSMessageType = 
+  | 'create_room'
+  | 'join_room'
+  | 'leave_room'
+  | 'set_ready'
+  | 'start_game'
+  | 'game_update'
+  | 'player_finished'
+  | 'room_update'
+  | 'error';
+
+export interface WSMessage {
+  type: WSMessageType;
+  payload?: any;
+}

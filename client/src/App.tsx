@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import HomePage from "@/pages/home";
 import GamePage from "@/pages/game";
+import LobbyPage from "@/pages/lobby";
+import MultiplayerGamePage from "@/pages/multiplayer-game";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -13,6 +15,8 @@ function Router() {
     <Switch>
       <Route path="/" component={HomePage} />
       <Route path="/game" component={GamePage} />
+      <Route path="/lobby" component={LobbyPage} />
+      <Route path="/multiplayer-game" component={MultiplayerGamePage} />
       <Route component={NotFound} />
     </Switch>
   );

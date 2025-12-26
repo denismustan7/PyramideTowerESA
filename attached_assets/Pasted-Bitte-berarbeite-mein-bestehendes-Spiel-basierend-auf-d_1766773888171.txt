@@ -1,0 +1,21 @@
+Bitte überarbeite mein bestehendes Spiel basierend auf den folgenden detaillierten Anforderungen, um das exakte "Magic Tower"-Gefühl von Fun4Four zu erreichen:
+1. Grafik & Design (Magic Tower Stil)
+• Hintergrund: Ersetze den aktuellen Hintergrund durch ein tiefes, dunkles Nachtblau (#000814) mit einem subtilen radialen Verlauf. Füge dezente magische Partikel oder einen leichten Nebel-Effekt im Hintergrund hinzu.
+• Karten-Design: * Vorderseite: Reinweißes Kartenblatt mit abgerundeten Ecken. Die Zahlen und Symbole müssen massiv vergrößert werden (Zahlen fett und mittig/oben links).
+• Rückseite: Ein edles, dunkelblaues Muster mit einem goldenen Rahmen und einem Turm-Emblem in der Mitte.
+• Schatten: Jede Karte auf dem Spielfeld braucht einen leichten Schlagschatten, um Tiefe zu erzeugen.
+• Zeitbalken: Implementiere oben mittig einen horizontalen Zeitbalken. Er soll glühen (Neon-Effekt) und die Farbe dynamisch von Cyan/Blau zu leuchtend Rot ändern, je weniger Zeit übrig bleibt.
+2. Gameplay-Logik & Schwierigkeit
+• Keine Markierungen: Entferne jegliche optische Hilfe! Passende Karten auf dem Spielfeld dürfen nicht mehr markiert, hervorgehoben oder animiert werden. Der Spieler muss selbst erkennen, welche Karte auf den Ablagestapel passt (+1 / -1 Logik).
+• Interaktion: Nur Karten, die physisch nicht von anderen Karten überdeckt werden, reagieren auf einen Tap. Verdeckte Karten sind leicht abgedunkelt.
+• Combo-System: Implementiere einen sichtbaren Multiplikator (1x, 2x, 5x...). Er steigt mit jeder Karte, die ohne Nutzung des Nachziehstapels abgeräumt wird, und setzt sich beim Nachziehen sofort auf 1x zurück.
+3. Multiplayer-System (6 Spieler)
+• Lobby-System: Erstelle ein Startmenü mit zwei Optionen: "Solo Spiel" und "Multiplayer".
+• Room-Funktion: * Ein Spieler kann einen "Room öffnen" (Host). Das System generiert einen 4- bis 6-stelligen Raum-Code.
+• Andere Spieler können über "Room beitreten" und die Eingabe des Codes beitreten.
+• Maximale Spieleranzahl pro Raum: 6 Spieler.
+• Synchronisation: Alle Spieler spielen das identische Karten-Layout (denselben Seed). Es ist ein Wettrennen: Wer das Board zuerst leert oder die meisten Punkte sammelt, gewinnt.
+• Live-Anzeige: Zeige am Rand des Bildschirms klein die Scores oder den Fortschritt (z.B. als Fortschrittsbalken) der anderen 5 Mitspieler an, um den Wettbewerb zu fördern.
+4. Technische Details für Mobile
+• Responsive Layout: Optimiere das CSS/Layout strikt für das Hochformat (Portrait). Die drei Türme müssen die obere Bildschirmhälfte füllen, der Ablagestapel und Nachziehstapel müssen bequem im Daumenbereich (unten) liegen.
+• Performance: Animationen (Kartenflug zum Stapel) müssen mit 60 FPS laufen. Nutze CSS-Transitions oder GSAP für flüssige Bewegungen.

@@ -28,13 +28,9 @@ export function GameHUD({
   onHome,
   isPaused
 }: GameHUDProps) {
-  const isLowTime = timeRemaining <= 10;
-
   return (
-    <div className="relative z-20 p-3 bg-[#0a0e14]/90 border-b border-amber-500/20">
-      {/* Top row: Navigation and Score */}
-      <div className="flex items-center justify-between gap-4 mb-2">
-        {/* Left: Home and Pause */}
+    <div className="relative z-20 p-3 bg-[#000814]/95 border-b border-amber-500/30">
+      <div className="flex items-center justify-between gap-4 mb-3">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -56,7 +52,6 @@ export function GameHUD({
           </Button>
         </div>
 
-        {/* Center: Score */}
         <motion.div
           key={score}
           initial={{ scale: 1.2 }}
@@ -76,7 +71,6 @@ export function GameHUD({
           </span>
         </motion.div>
 
-        {/* Right: Level and Rank */}
         <div className="flex items-center gap-2">
           <Badge 
             variant="outline" 
@@ -96,12 +90,32 @@ export function GameHUD({
         </div>
       </div>
 
-      {/* Timer Bar */}
       <TimerBar 
         timeRemaining={timeRemaining} 
         totalTime={totalTime}
-        isLowTime={isLowTime}
       />
+
+      {combo > 1 && (
+        <motion.div
+          key={combo}
+          initial={{ scale: 1.3, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="absolute top-3 left-1/2 -translate-x-1/2 -translate-y-full"
+        >
+          <span 
+            className="text-3xl font-black"
+            style={{
+              color: combo >= 5 ? '#FFD700' : '#22d3ee',
+              textShadow: combo >= 5 
+                ? '0 0 20px rgba(255, 215, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.5)' 
+                : '0 0 15px rgba(34, 211, 238, 0.6)'
+            }}
+            data-testid="text-combo"
+          >
+            {combo}x
+          </span>
+        </motion.div>
+      )}
     </div>
   );
 }

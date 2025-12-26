@@ -13,16 +13,53 @@ import {
   tickTimer, 
   canPlay, 
   getDiscardTop,
-  hasValidMoves,
   calculateScoreBreakdown,
   getRank
 } from "@/lib/gameEngine";
-import type { GameState, Card } from "@shared/schema";
+import type { GameState } from "@shared/schema";
 import { PyramidBoard } from "@/components/game/pyramid-board";
 import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
 import { GameOverOverlay } from "@/components/game/game-over-overlay";
-import { ComboIndicator } from "@/components/game/combo-indicator";
+
+function MagicalParticles() {
+  const particles = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: Math.random() * 5,
+    duration: 3 + Math.random() * 4,
+    size: 2 + Math.random() * 3,
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.left}%`,
+            width: p.size,
+            height: p.size,
+            background: `radial-gradient(circle, rgba(34, 211, 238, 0.6), transparent)`,
+          }}
+          initial={{ bottom: -20, opacity: 0 }}
+          animate={{
+            bottom: ['0%', '100%'],
+            opacity: [0, 0.8, 0],
+            x: [0, Math.random() * 40 - 20],
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function GamePage() {
   const [, setLocation] = useLocation();
@@ -30,18 +67,15 @@ export default function GamePage() {
   const [gameState, setGameState] = useState<GameState>(() => initGame(1));
   const [isPaused, setIsPaused] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
-  const [playerName, setPlayerName] = useState("");
   const [shakeCardId, setShakeCardId] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Submit score mutation
   const submitScore = useMutation({
     mutationFn: async ({ name, score }: { name: string; score: number }) => {
       return apiRequest('POST', '/api/leaderboard', { playerName: name, score });
     }
   });
 
-  // Timer effect
   useEffect(() => {
     if (gameState.phase === 'playing' && !isPaused) {
       timerRef.current = setInterval(() => {
@@ -62,27 +96,23 @@ export default function GamePage() {
     };
   }, [gameState.phase, isPaused]);
 
-  // Check for game over
   useEffect(() => {
     if (gameState.phase === 'won' || gameState.phase === 'lost') {
       setShowGameOver(true);
     }
   }, [gameState.phase]);
 
-  // Handle card click
   const handleCardClick = useCallback((cardId: string) => {
     if (gameState.phase !== 'playing' || isPaused) return;
 
     if (canPlay(gameState, cardId)) {
       setGameState(prev => playCard(prev, cardId));
     } else {
-      // Shake animation for invalid move
       setShakeCardId(cardId);
       setTimeout(() => setShakeCardId(null), 300);
     }
   }, [gameState, isPaused]);
 
-  // Handle draw
   const handleDraw = useCallback(() => {
     if (gameState.phase !== 'playing' || isPaused) return;
     
@@ -98,33 +128,27 @@ export default function GamePage() {
     setGameState(prev => drawCard(prev));
   }, [gameState, isPaused, toast]);
 
-  // Handle pause toggle
   const togglePause = () => {
     setIsPaused(prev => !prev);
   };
 
-  // Handle restart
   const handleRestart = () => {
     setGameState(initGame(gameState.level));
     setShowGameOver(false);
     setIsPaused(false);
   };
 
-  // Handle next level
   const handleNextLevel = () => {
     setGameState(initGame(gameState.level + 1));
     setShowGameOver(false);
     setIsPaused(false);
   };
 
-  // Handle go home
   const handleGoHome = () => {
     setLocation("/");
   };
 
-  // Handle submit score
   const handleSubmitScore = (name: string) => {
-    setPlayerName(name);
     submitScore.mutate({ name, score: gameState.score });
   };
 
@@ -133,14 +157,25 @@ export default function GamePage() {
   const rank = getRank(gameState.score);
 
   return (
-    <div className="min-h-screen bg-[#050a0f] flex flex-col overflow-hidden">
-      {/* Background effects */}
+    <div 
+      className="min-h-screen flex flex-col overflow-hidden relative"
+      style={{ 
+        background: 'radial-gradient(ellipse at center, #001428 0%, #000814 50%, #000510 100%)'
+      }}
+    >
+      <MagicalParticles />
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl" />
+        <div 
+          className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(34, 211, 238, 0.08), transparent)' }}
+        />
+        <div 
+          className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full blur-3xl"
+          style={{ background: 'radial-gradient(circle, rgba(212, 175, 55, 0.08), transparent)' }}
+        />
       </div>
 
-      {/* HUD */}
       <GameHUD
         score={gameState.score}
         level={gameState.level}
@@ -153,10 +188,6 @@ export default function GamePage() {
         isPaused={isPaused}
       />
 
-      {/* Combo Indicator */}
-      <ComboIndicator combo={gameState.combo} />
-
-      {/* Pyramids */}
       <div className="flex-1 flex items-center justify-center p-2 relative z-10">
         <PyramidBoard
           pyramids={gameState.pyramids}
@@ -166,7 +197,6 @@ export default function GamePage() {
         />
       </div>
 
-      {/* Draw Area */}
       <DrawArea
         drawPile={gameState.drawPile}
         discardPile={gameState.discardPile}
@@ -174,26 +204,33 @@ export default function GamePage() {
         disabled={isPaused || gameState.phase !== 'playing'}
       />
 
-      {/* Pause Overlay */}
       <AnimatePresence>
         {isPaused && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-40 flex items-center justify-center bg-black/85 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               className="text-center"
             >
-              <h2 className="text-3xl font-bold text-amber-400 mb-6">Pausiert</h2>
+              <h2 
+                className="text-4xl font-bold mb-8"
+                style={{ 
+                  color: '#D4AF37',
+                  textShadow: '0 0 20px rgba(212, 175, 55, 0.5)'
+                }}
+              >
+                Pausiert
+              </h2>
               <div className="flex gap-4">
                 <Button
                   size="lg"
                   onClick={togglePause}
-                  className="bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
+                  className="bg-cyan-500/20 text-cyan-400 border-2 border-cyan-500/50 hover:bg-cyan-500/30"
                   data-testid="button-resume"
                 >
                   <Play className="w-5 h-5 mr-2" />
@@ -203,7 +240,7 @@ export default function GamePage() {
                   size="lg"
                   variant="outline"
                   onClick={handleRestart}
-                  className="border-amber-500/50 text-amber-400"
+                  className="border-2 border-amber-500/50 text-amber-400 hover:bg-amber-500/20"
                   data-testid="button-restart"
                 >
                   <RotateCcw className="w-5 h-5 mr-2" />
@@ -213,7 +250,7 @@ export default function GamePage() {
                   size="lg"
                   variant="outline"
                   onClick={handleGoHome}
-                  className="border-gray-500/50 text-gray-400"
+                  className="border-2 border-gray-500/50 text-gray-400 hover:bg-gray-500/20"
                   data-testid="button-home"
                 >
                   <Home className="w-5 h-5 mr-2" />
@@ -225,7 +262,6 @@ export default function GamePage() {
         )}
       </AnimatePresence>
 
-      {/* Game Over Overlay */}
       <GameOverOverlay
         isVisible={showGameOver}
         won={gameState.phase === 'won'}
