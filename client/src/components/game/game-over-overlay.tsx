@@ -1,39 +1,46 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Medal, Crown, RotateCcw, Home } from "lucide-react";
+import { Trophy, Crown, RotateCcw, Home, ChevronRight, Skull, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Player } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import type { ScoreBreakdown, RankName } from "@shared/schema";
 
 interface GameOverOverlayProps {
   isVisible: boolean;
-  winner: Player | null;
-  players: Player[];
-  onPlayAgain: () => void;
-  onGoHome: () => void;
+  won: boolean;
+  score: number;
+  scoreBreakdown: ScoreBreakdown;
+  rank: RankName;
+  level: number;
+  onRestart: () => void;
+  onNextLevel?: () => void;
+  onHome: () => void;
+  onSubmitScore: (name: string) => void;
+  isSubmitting?: boolean;
 }
-
-const rankColors = [
-  "text-amber-500", // 1st
-  "text-slate-400", // 2nd
-  "text-amber-700", // 3rd
-  "text-muted-foreground", // 4th
-];
-
-const rankBgColors = [
-  "bg-amber-500/10 border-amber-500/30",
-  "bg-slate-400/10 border-slate-400/30",
-  "bg-amber-700/10 border-amber-700/30",
-  "bg-muted/50 border-muted",
-];
 
 export function GameOverOverlay({
   isVisible,
-  winner,
-  players,
-  onPlayAgain,
-  onGoHome,
+  won,
+  score,
+  scoreBreakdown,
+  rank,
+  level,
+  onRestart,
+  onNextLevel,
+  onHome,
+  onSubmitScore,
+  isSubmitting = false
 }: GameOverOverlayProps) {
-  // Sort players by score
-  const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+  const [playerName, setPlayerName] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = () => {
+    if (playerName.trim()) {
+      onSubmitScore(playerName.trim());
+      setSubmitted(true);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -42,7 +49,7 @@ export function GameOverOverlay({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md overflow-y-auto py-8"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md overflow-y-auto py-8 px-4"
           data-testid="game-over-overlay"
         >
           <motion.div
@@ -50,88 +57,154 @@ export function GameOverOverlay({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: -100 }}
             transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            className="bg-card border border-card-border rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden"
+            className="bg-[#0a0e14] border border-amber-500/30 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
           >
-            {/* Winner Header */}
-            <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 px-6 py-8 text-center text-white">
+            {/* Header */}
+            <div className={`relative px-6 py-8 text-center ${won 
+              ? 'bg-gradient-to-br from-amber-500/20 to-amber-600/10' 
+              : 'bg-gradient-to-br from-red-500/20 to-red-600/10'
+            }`}>
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.3, type: "spring" }}
               >
-                <Crown className="w-16 h-16 mx-auto mb-3" />
+                {won ? (
+                  <Crown className="w-16 h-16 mx-auto mb-3 text-amber-400" />
+                ) : (
+                  <Skull className="w-16 h-16 mx-auto mb-3 text-red-400" />
+                )}
               </motion.div>
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-3xl font-bold mb-1"
+                className={`text-3xl font-bold mb-1 ${won ? 'text-amber-400' : 'text-red-400'}`}
               >
-                Spiel vorbei!
+                {won ? 'Level geschafft!' : 'Zeit abgelaufen!'}
               </motion.h1>
-              {winner && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-xl text-white/90"
-                  data-testid="winner-name"
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="text-gray-400"
+              >
+                Level {level}
+              </motion.p>
+            </div>
+
+            {/* Score Summary */}
+            <div className="p-6 space-y-4">
+              {/* Total Score */}
+              <div className="text-center">
+                <p className="text-gray-400 text-sm mb-1">Gesamtpunktzahl</p>
+                <p 
+                  className="text-4xl font-bold"
+                  style={{ 
+                    color: '#D4AF37',
+                    textShadow: '0 0 15px rgba(212, 175, 55, 0.5)'
+                  }}
+                  data-testid="final-score"
                 >
-                  {winner.name} gewinnt!
-                </motion.p>
+                  {score.toLocaleString()}
+                </p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <Star className="w-4 h-4 text-amber-400" />
+                  <span className="text-amber-400 font-medium">{rank}</span>
+                </div>
+              </div>
+
+              {/* Score Breakdown */}
+              <div className="bg-gray-800/30 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex justify-between text-gray-400">
+                  <span>Basis-Punkte</span>
+                  <span>{scoreBreakdown.baseScore.toLocaleString()}</span>
+                </div>
+                {scoreBreakdown.towerBonus > 0 && (
+                  <div className="flex justify-between text-cyan-400">
+                    <span>Turm-Bonus</span>
+                    <span>+{scoreBreakdown.towerBonus.toLocaleString()}</span>
+                  </div>
+                )}
+                {scoreBreakdown.timeBonus > 0 && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Zeit-Bonus</span>
+                    <span>+{scoreBreakdown.timeBonus.toLocaleString()}</span>
+                  </div>
+                )}
+                {scoreBreakdown.perfectBonus > 0 && (
+                  <div className="flex justify-between text-amber-400">
+                    <span>Perfekt-Bonus</span>
+                    <span>+{scoreBreakdown.perfectBonus.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Score */}
+              {!submitted ? (
+                <div className="space-y-2">
+                  <p className="text-gray-400 text-sm text-center">Trage dich in die Bestenliste ein:</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      placeholder="Dein Name"
+                      maxLength={20}
+                      className="bg-gray-800/50 border-gray-700 text-white"
+                      data-testid="input-player-name"
+                    />
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!playerName.trim() || isSubmitting}
+                      className="bg-amber-500/20 text-amber-400 border border-amber-500/50"
+                      data-testid="button-submit-score"
+                    >
+                      {isSubmitting ? '...' : 'OK'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-green-400 text-sm">
+                  Punktzahl eingetragen!
+                </p>
               )}
             </div>
 
-            {/* Scoreboard */}
-            <div className="p-6">
-              <h2 className="text-lg font-semibold mb-4 text-center">Endstand</h2>
-              <div className="space-y-3">
-                {sortedPlayers.map((player, index) => (
-                  <motion.div
-                    key={player.id}
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${rankBgColors[index] || rankBgColors[3]}`}
-                    data-testid={`final-rank-${index + 1}`}
-                  >
-                    <div className={`flex items-center justify-center w-8 h-8 rounded-full ${rankColors[index]}`}>
-                      {index === 0 ? (
-                        <Trophy className="w-5 h-5" />
-                      ) : (
-                        <Medal className="w-5 h-5" />
-                      )}
-                    </div>
-                    <span className="font-medium flex-1">{player.name}</span>
-                    <span className={`font-bold text-lg ${rankColors[index]}`}>
-                      {player.score}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
             {/* Actions */}
-            <div className="px-6 pb-6 flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={onPlayAgain}
-                className="flex-1"
-                size="lg"
-                data-testid="button-play-again"
-              >
-                <RotateCcw className="w-5 h-5 mr-2" />
-                Nochmal spielen
-              </Button>
-              <Button
-                onClick={onGoHome}
-                variant="outline"
-                className="flex-1"
-                size="lg"
-                data-testid="button-go-home"
-              >
-                <Home className="w-5 h-5 mr-2" />
-                Hauptmenü
-              </Button>
+            <div className="px-6 pb-6 flex flex-col gap-3">
+              {won && onNextLevel && (
+                <Button
+                  onClick={onNextLevel}
+                  className="w-full bg-gradient-to-r from-cyan-600 to-cyan-500 text-white"
+                  size="lg"
+                  data-testid="button-next-level"
+                >
+                  <ChevronRight className="w-5 h-5 mr-2" />
+                  Nachstes Level
+                </Button>
+              )}
+              <div className="flex gap-3">
+                <Button
+                  onClick={onRestart}
+                  variant="outline"
+                  className="flex-1 border-amber-500/50 text-amber-400"
+                  size="lg"
+                  data-testid="button-restart"
+                >
+                  <RotateCcw className="w-5 h-5 mr-2" />
+                  Neustart
+                </Button>
+                <Button
+                  onClick={onHome}
+                  variant="outline"
+                  className="flex-1 border-gray-500/50 text-gray-400"
+                  size="lg"
+                  data-testid="button-home"
+                >
+                  <Home className="w-5 h-5 mr-2" />
+                  Menu
+                </Button>
+              </div>
             </div>
           </motion.div>
         </motion.div>

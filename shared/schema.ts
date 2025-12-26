@@ -1,138 +1,116 @@
-import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Database tables for persistence
-export const users = pgTable("users", {
-  id: varchar("id", { length: 36 }).primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
-
-export const leaderboardEntries = pgTable("leaderboard_entries", {
-  id: varchar("id", { length: 36 }).primaryKey(),
+// Database table for leaderboard
+export const leaderboard = pgTable("leaderboard", {
+  id: serial("id").primaryKey(),
   playerName: text("player_name").notNull(),
   score: integer("score").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  rank: text("rank").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format for daily grouping
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+export const insertLeaderboardSchema = createInsertSchema(leaderboard).omit({ id: true });
+export type InsertLeaderboard = z.infer<typeof insertLeaderboardSchema>;
+export type LeaderboardEntry = typeof leaderboard.$inferSelect;
 
-export const insertLeaderboardSchema = createInsertSchema(leaderboardEntries).pick({
-  playerName: true,
-  score: true,
-});
+// Card suits and values
+export type Suit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
+export type CardValue = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-export type LeaderboardEntry = typeof leaderboardEntries.$inferSelect;
-export type InsertLeaderboardEntry = z.infer<typeof insertLeaderboardSchema>;
-
-// Game Types (in-memory only)
 export interface Card {
   id: string;
-  value: number; // The card's face value (1-13)
-  suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
+  suit: Suit;
+  value: CardValue;
+  isFaceUp: boolean;
+  isPlayable: boolean; // Can be clicked (not covered by other cards)
 }
 
-export interface ActionCard {
-  id: string;
-  type: 'plus' | 'minus';
+// Pyramid node represents a card position in the tri-peaks structure
+export interface PyramidNode {
+  card: Card | null; // null if card was removed
+  row: number; // 0-3 (0 = peak)
+  col: number;
+  peakIndex: number; // 0, 1, or 2
+  coveredBy: string[]; // IDs of cards covering this one
 }
 
-export interface Player {
-  id: string;
-  name: string;
-  score: number;
-  combo: number;
-  isEliminated: boolean;
-  isReady: boolean;
-  tower: Card[];
-  hand: ActionCard[];
-  lastAction?: {
-    type: 'plus' | 'minus';
-    timestamp: number;
-  };
-}
-
-export interface RoundState {
-  roundNumber: number;
-  timeRemaining: number;
-  totalTime: number;
-  isActive: boolean;
-}
-
-export type GamePhase = 'waiting' | 'countdown' | 'playing' | 'round_transition' | 'game_over';
-
+// Game state
 export interface GameState {
-  roomId: string;
-  phase: GamePhase;
-  round: RoundState;
-  players: Player[];
-  eliminatedPlayerIds: string[];
-  winner?: Player;
+  pyramids: PyramidNode[][]; // Three pyramids
+  drawPile: Card[]; // Face-down draw pile
+  discardPile: Card[]; // Face-up discard pile (top is current)
+  score: number;
+  combo: number; // Current combo multiplier
+  maxCombo: number; // Highest combo achieved this game
+  level: number;
+  timeRemaining: number; // Seconds
+  totalTime: number; // Total time for this level
+  towersCleared: number; // 0-3
+  phase: 'playing' | 'paused' | 'won' | 'lost';
+  cardsRemaining: number; // Cards still on pyramids
 }
 
-export interface Room {
-  id: string;
-  code: string;
-  hostId: string;
-  players: Player[];
-  gameState?: GameState;
-  createdAt: number;
+// Score breakdown for game over screen
+export interface ScoreBreakdown {
+  baseScore: number;
+  comboBonus: number;
+  towerBonus: number;
+  timeBonus: number;
+  perfectBonus: number;
+  totalScore: number;
 }
 
-// WebSocket Event Types
-export type ClientToServerEvent =
-  | { type: 'create_room'; playerName: string }
-  | { type: 'join_room'; roomCode: string; playerName: string }
-  | { type: 'leave_room' }
-  | { type: 'set_ready'; ready: boolean }
-  | { type: 'start_game' }
-  | { type: 'play_card'; actionCardId: string; towerCardId: string }
-  | { type: 'request_state' };
+// Rank thresholds
+export const RANK_THRESHOLDS = {
+  NOVIZE: 0,
+  ZAUBERLEHRLING: 10001,
+  MAGIER: 30001,
+  ERZMAGIER: 70001,
+  TURMWAECHTER: 150001,
+} as const;
 
-export type ServerToClientEvent =
-  | { type: 'room_created'; room: Room; playerId: string }
-  | { type: 'room_joined'; room: Room; playerId: string }
-  | { type: 'room_update'; room: Room }
-  | { type: 'game_started'; gameState: GameState }
-  | { type: 'round_update'; round: RoundState }
-  | { type: 'game_update'; gameState: GameState }
-  | { type: 'timer_tick'; timeRemaining: number }
-  | { type: 'combo_trigger'; playerId: string; combo: number }
-  | { type: 'elimination_notice'; playerId: string; roundNumber: number }
-  | { type: 'game_over'; winner: Player; finalScores: Player[] }
-  | { type: 'leaderboard_update'; entries: LeaderboardEntry[] }
-  | { type: 'error'; message: string };
+export type RankName = 'Novize' | 'Zauberlehrling' | 'Magier' | 'Erzmagier' | 'Turmwächter';
 
-// Game Constants
-export const TOTAL_ROUNDS = 8;
-export const BASE_ROUND_TIME = 60; // seconds
-export const TIME_DECREASE_PER_ROUND = 5; // seconds decrease from round 4
-export const ELIMINATION_START_ROUND = 5;
-export const MAX_PLAYERS = 4;
-export const MIN_PLAYERS_TO_START = 1;
+export function getRank(totalScore: number): RankName {
+  if (totalScore >= RANK_THRESHOLDS.TURMWAECHTER) return 'Turmwächter';
+  if (totalScore >= RANK_THRESHOLDS.ERZMAGIER) return 'Erzmagier';
+  if (totalScore >= RANK_THRESHOLDS.MAGIER) return 'Magier';
+  if (totalScore >= RANK_THRESHOLDS.ZAUBERLEHRLING) return 'Zauberlehrling';
+  return 'Novize';
+}
 
-// Helper function to calculate round time
-export function getRoundTime(roundNumber: number): number {
-  if (roundNumber < 4) {
-    return BASE_ROUND_TIME;
+// Card value sequence for +1/-1 matching
+export const CARD_VALUES: CardValue[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+export function getValueIndex(value: CardValue): number {
+  return CARD_VALUES.indexOf(value);
+}
+
+// Check if card can be played on discard pile (±1 with Ace wrap)
+export function canPlayCard(cardValue: CardValue, discardTopValue: CardValue): boolean {
+  const cardIdx = getValueIndex(cardValue);
+  const discardIdx = getValueIndex(discardTopValue);
+  
+  // Normal +1/-1
+  if (Math.abs(cardIdx - discardIdx) === 1) return true;
+  
+  // Ace wraps: A can go on K, K can go on A
+  if ((cardValue === 'A' && discardTopValue === 'K') ||
+      (cardValue === 'K' && discardTopValue === 'A')) {
+    return true;
   }
-  // Round 4: 55s, Round 5: 50s, Round 6: 45s, Round 7: 40s, Round 8: 35s
-  return BASE_ROUND_TIME - (roundNumber - 3) * TIME_DECREASE_PER_ROUND;
+  
+  return false;
 }
 
-// Helper function to determine who gets eliminated
-export function getEliminationRank(roundNumber: number): number | null {
-  // After round 5, 4th place eliminated
-  // After round 6, 3rd place eliminated
-  // After round 7, 2nd place eliminated
-  if (roundNumber === 5) return 4;
-  if (roundNumber === 6) return 3;
-  if (roundNumber === 7) return 2;
-  return null;
-}
+// Game constants
+export const CARDS_PER_PYRAMID = 10; // Standard tri-peaks: 10 cards per peak
+export const TOTAL_PYRAMID_CARDS = 28; // 3 peaks share some base cards
+export const BASE_POINTS = 100;
+export const TOWER_BONUS = 500;
+export const PERFECT_BONUS = 5000;
+export const TIME_BONUS_MULTIPLIER = 10;
+export const BASE_TIME = 120; // 2 minutes base time
+export const TIME_DECREASE_PER_LEVEL = 5;

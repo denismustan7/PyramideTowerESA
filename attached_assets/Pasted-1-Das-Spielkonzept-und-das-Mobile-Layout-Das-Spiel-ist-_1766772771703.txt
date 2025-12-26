@@ -1,0 +1,55 @@
+1. Das Spielkonzept und das Mobile Layout
+Das Spiel ist eine extrem schnelle Variante von Tri-Peaks Solitaire. Da es für das Handy optimiert sein soll, wird das Querformat des Originals in ein vertikales Hochformat (Portrait Mode) übersetzt.
+Bildschirm-Aufteilung von oben nach unten:
+• Obere Zone (Anzeigen): Hier befindet sich die Score-Anzeige, das aktuelle Level und der Zeitbalken. Der Zeitbalken ist ein schmaler, leuchtender Streifen, der stetig schrumpft.
+• Mittlere Zone (Die Türme): Drei Pyramiden aus Karten. In der mobilen Version überlappen sich die Basen der drei Pyramiden leicht, um die Breite des Bildschirms optimal zu nutzen. Die Karten an der Basis liegen offen, die darüberliegenden sind verdeckt, bis sie freigespielt werden.
+• Untere Zone (Aktion): Hier liegt links der verdeckte Nachziehstapel und zentral der offene Ablagestapel. Rechts daneben ist Platz für einen optionalen "Wildcard"-Button (Joker). Alles ist so platziert, dass es bequem mit dem Daumen erreicht werden kann.
+2. Visuelles Design und Farbpalette
+Das Design folgt einem "Dark Fantasy & Magic" Thema. Es wirkt edel, mystisch und hochwertig.
+Hauptfarben:
+• Hintergrund: Ein sehr dunkles Nachtblau oder ein tiefes Schwarzviolett (Hex-Code Beispiel: #050505 bis #0A0E14). Dies sorgt dafür, dass die Karten im Vordergrund fast leuchten.
+• Primär-Akzent (Gold): Alle Rahmen, die Score-Ziffern und wichtige UI-Elemente sind in einem glänzenden Goldton gehalten (#D4AF37). Ein leichter Metall-Glanz-Effekt lässt es hochwertiger wirken.
+• Sekundär-Akzent (Magisches Blau): Ein leuchtendes Cyan oder Eisblau (#00F5FF) wird für Partikeleffekte, den Zeitbalken und das Glühen beim Abräumen einer Karte verwendet.
+• Statusfarben: Ein kräftiges Rubinrot für Fehler oder wenn die Zeit abläuft.
+3. Kartendesign (Mobile-Optimiert)
+Die Karten sind das wichtigste Element und müssen auf kleinen Bildschirmen perfekt lesbar sein.
+Vorderseite der Karten:
+• Hintergrund der Karte: Ein helles Reinweiß oder ein sehr helles Elfenbein.
+• Zahlen und Symbole: Die Zahlen (2-10, J, Q, K, A) sind extrem groß und fett gedruckt, damit man sie auch bei schneller Spielweise sofort erkennt.
+• Farben: Klassisches Schwarz für Pik/Kreuz und ein helles, klares Rot für Herz/Karo.
+Rückseite der Karten:
+• Grundfarbe: Dunkles Blau, passend zum Spielfeld-Hintergrund.
+• Muster: Ein goldener Rahmen mit einem zentralen Symbol in der Mitte, zum Beispiel einem stilisierten Turm, einem Pentagramm oder einem Auge.
+Visuelle Zustände:
+• Spielbare Karten: Kräftige Farben, klarer Kontrast.
+• Gesperrte Karten (verdeckt): Leicht abgedunkelt oder mit einem grauen Schleier belegt, um den Fokus auf die spielbaren Karten zu lenken.
+4. Spielregeln und Mechanik
+Das Ziel ist es, das Spielfeld so schnell wie möglich zu leeren.
+• Basis-Logik: Du kannst eine Karte vom Spielfeld auf den Ablagestapel tippen, wenn ihr Wert genau um 1 höher oder 1 niedriger ist als die Karte, die gerade oben auf dem Ablagestapel liegt.
+• Die Sequenz: Die Reihenfolge ist 2-3-4-5-6-7-8-9-10-J-Q-K-A. Das Ass ist die Brücke: Auf ein Ass darf ein König (K) oder eine 2 gelegt werden.
+• Karten freischalten: Karten in den oberen Schichten der Pyramiden werden erst dann umgedreht und klickbar, wenn die beiden Karten, die sie teilweise überdecken, entfernt wurden.
+• Nachziehen: Wenn kein Zug auf dem Feld möglich ist, tippst du auf den verdeckten Stapel. Eine neue Karte wird aufgedeckt.
+• Game Over: Das Spiel endet, wenn die Zeit abläuft oder wenn der Nachziehstapel leer ist und keine weiteren Züge mehr gemacht werden können.
+5. Das Punkte- und Combo-System
+Dies ist der wichtigste Teil für den Wettbewerbscharakter des Spiels.
+• Combo-Multiplikator: Die erste Karte, die du entfernst, gibt beispielsweise 100 Punkte. Jede weitere Karte, die du direkt hintereinander (ohne den Nachziehstapel zu nutzen) abräumst, erhöht den Multiplikator. Die zweite Karte gibt 200, die dritte 300 usw.
+• Combo-Reset: Sobald du eine Karte vom Nachziehstapel ziehst, wird der Multiplikator sofort auf 1x zurückgesetzt.
+• Turm-Bonus: Das vollständige Abräumen eines Turms (der "Gipfel") gibt einen hohen Bonusbetrag. Der Bonus für den dritten und letzten Turm ist am höchsten.
+• Zeit-Bonus: Die restliche Zeit auf dem Zeitbalken wird am Ende des Levels mit einem Faktor multipliziert und zum Score addiert.
+• Perfekt-Bonus: Wenn das gesamte Feld geleert wird, ohne dass der Nachziehstapel leer ist, gibt es einen massiven Zusatz-Bonus.
+6. Ranksystem und Progression
+Um Langzeitmotivation zu schaffen, braucht das Spiel ein Rang-System.
+• Level-Steigerung: Mit jedem bestandenen Level wird das Spiel schwerer. Die Zeit läuft schneller ab und es gibt weniger Karten im Nachziehstapel.
+• Magische Titel (Ränge): Basierend auf der Gesamtpunktzahl erhält der Spieler am Ende Titel:
+• 0 - 10.000 Punkte: Novize
+• 10.001 - 30.000 Punkte: Zauberlehrling
+• 30.001 - 70.000 Punkte: Magier
+• 70.001 - 150.000 Punkte: Erzmagier
+• Über 150.000 Punkte: Turmwächter (Master of the Tower)
+• Bestenliste: Eine tägliche und eine globale Highscore-Liste, in der die besten 10 Spieler mit ihrem Namen oder Kürzel angezeigt werden.
+7. Animationen und Feedback für Mobile
+Da haptisches Feedback auf dem Handy entscheidend ist, sollten folgende Effekte eingebaut werden:
+• Karten-Flug: Karten springen nicht einfach, sondern gleiten in einer flüssigen Bewegung (Dauer ca. 200ms) zum Stapel.
+• Erschütterung: Bei einem falschen Klick wackelt die Karte kurz und das Handy vibriert minimal (Haptic Feedback).
+• Combo-Visualisierung: Bei einer hohen Combo (z. B. ab 5 Karten) fängt die Score-Anzeige an zu glühen oder Funken zu sprühen.
+• Sound: Ein kurzer, heller "Klick"-Ton beim Legen einer Karte. Der Ton sollte bei jedem Schritt einer Combo in der Tonhöhe leicht ansteigen, um ein Gefühl von Erfolg zu vermitteln.

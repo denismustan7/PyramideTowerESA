@@ -4,17 +4,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
-import { GameProvider } from "@/lib/gameContext";
-import MainMenu from "@/pages/main-menu";
-import LobbyPage from "@/pages/lobby";
+import HomePage from "@/pages/home";
 import GamePage from "@/pages/game";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={MainMenu} />
-      <Route path="/lobby" component={LobbyPage} />
+      <Route path="/" component={HomePage} />
       <Route path="/game" component={GamePage} />
       <Route component={NotFound} />
     </Switch>
@@ -24,12 +21,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="magic-tower-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="magic-tower-theme">
         <TooltipProvider>
-          <GameProvider>
-            <Toaster />
-            <Router />
-          </GameProvider>
+          <Toaster />
+          <Router />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
