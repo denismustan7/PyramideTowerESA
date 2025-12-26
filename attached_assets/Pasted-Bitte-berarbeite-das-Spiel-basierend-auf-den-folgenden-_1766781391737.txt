@@ -1,0 +1,28 @@
+Bitte überarbeite das Spiel basierend auf den folgenden fünf Punkten, um die Professionalität und Spielbarkeit im Hochkant-Modus (Portrait) zu gewährleisten:
+1. Sichtbarkeit der Karten (Ebenen-System)
+• Abdeckung: Nur die ersten zwei Reihen der drei Pyramiden dürfen aufgedeckt sein.
+• Reihe 1 (Unten): Offen, hell und spielbar.
+• Reihe 2 (Dahinter): Aufgedeckt (Zahlenwert sichtbar), aber durch ein dunkles Overlay verdunkelt und gesperrt.
+• Hintere Reihen: Müssen komplett verdeckt (Kartenrückseite) bleiben.
+• Dynamische Freischaltung: Eine Karte wird erst hell und aktiv, wenn sie von keiner Karte der davorliegenden Reihe mehr physisch blockiert wird. Sobald eine Karte frei wird, wird die Karte direkt dahinter aufgedeckt und wechselt in den "verdunkelten Vorschau-Modus".
+2. Layout & Slot-Positionierung (Kein Text)
+• Neue Slot-Reihenfolge (links nach rechts):
+1. Haupt-Ablagestapel: Soll jetzt ganz links stehen (auf der Position des alten 4er-Slots).
+2. Combo-Slot 1 (4er): Rückt in die Mitte.
+3. Combo-Slot 2 (7er): Bleibt auf der rechten Seite.
+• Design-Clean-up: Entferne jeglichen Text von den Slots (kein "4x COMBO", kein "7x COMBO", kein "X"). Die Slots sollen ein edles, leeres Rahmendesign haben, bis eine Zufallskarte darin erscheint.
+• Pyramiden: Verkleinere die horizontalen Abstände zwischen den drei Pyramiden deutlich, damit sie kompakt nebeneinander stehen.
+3. Intelligentes Auto-Placement (Karten-Fluss)
+• Keine Abfragen mehr: Wenn der Spieler eine passende, freie Karte im Spielfeld antippt, muss diese automatisch auf den richtigen Slot fliegen.
+
+Fehler-Abzug: Passt die Karte auf keinen der drei Plätze, ziehe sofort 200 Punkte ab (Fehlklick-Bestrafung).
+4. Zeit-System & Deck-Anzeige
+• Einzelschienen-Zeitbalken: Entferne die zwei grünen Balken. Erstelle einen einzigen vertikalen Balken direkt links neben dem Nachziehstapel (Deck).
+• Runden-Zeit: * Runde 1 bis 4: Jeweils 60 Sekunden.
+• Ab Runde 5: Die Zeit verringert sich pro Runde um jeweils 5 Sekunden.
+• End-Bonus: Bei Level-Abschluss erhält der Spieler 500 Punkte pro ungeöffneter Karte im Deck.
+5. Mobile Optimierung (Echter Portrait-Modus)
+• Hochkant-Zwang: Optimiere das gesamte CSS/Layout so, dass das Spiel im Hochformat perfekt aussieht. Die Karten und Türme müssen automatisch so herunterskaliert werden, dass alles ohne horizontales Scrollen auf das Handy-Display passt.
+• Touch-Optimierung: Die Abstände müssen so gewählt sein, dass man die Karten mit dem Daumen gut trifft, ohne die Türme zu weit in die Breite zu ziehen.
+
+Verwende für die Karten-Anordnung absolute positioning innerhalb eines relative Containers für die Pyramiden, um die Überlappung und das Versetzen der Reihen präzise zu steuern. Nutze z-index für die Ebenen-Logik und pointer-events: none für die blockierten Karten.

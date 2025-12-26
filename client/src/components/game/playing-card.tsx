@@ -174,91 +174,55 @@ interface BonusSlotProps {
 }
 
 export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick }: BonusSlotProps) {
-  const comboLabel = slotNumber === 1 ? '4x' : '7x';
-  
   if (!isActive) {
     return (
-      <div className="flex flex-col items-center gap-1">
-        <div 
-          className="w-11 h-16 rounded-md flex items-center justify-center relative"
-          style={{
-            background: 'rgba(0, 0, 0, 0.4)',
-            border: '2px solid rgba(100, 100, 100, 0.4)',
-          }}
-        >
-          <span className="text-gray-500 text-xl font-bold">X</span>
-        </div>
-        <span className="text-gray-500 text-[9px] font-bold tracking-wide">{comboLabel} COMBO</span>
-      </div>
+      <div 
+        className="w-11 h-16 rounded-md"
+        style={{
+          background: 'rgba(0, 0, 0, 0.4)',
+          border: '2px solid rgba(100, 100, 100, 0.4)',
+        }}
+      />
     );
   }
 
-  // Slot is active and has a card - make it clickable to play on
   if (card) {
     return (
-      <div className="flex flex-col items-center gap-1">
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ 
-            scale: 1,
-            boxShadow: hasSelectedCard 
-              ? ['0 0 15px rgba(212, 175, 55, 0.4)', '0 0 25px rgba(212, 175, 55, 0.7)', '0 0 15px rgba(212, 175, 55, 0.4)']
-              : 'none'
-          }}
-          transition={{ 
-            scale: { duration: 0.3 },
-            boxShadow: { duration: 1.5, repeat: Infinity }
-          }}
-          className={cn(
-            "relative rounded-md",
-            hasSelectedCard && "cursor-pointer"
-          )}
-          style={{
-            outline: hasSelectedCard ? '3px solid rgba(212, 175, 55, 0.8)' : 'none',
-            outlineOffset: '2px'
-          }}
-          onClick={hasSelectedCard ? onClick : undefined}
-          whileHover={hasSelectedCard ? { scale: 1.08 } : {}}
-          whileTap={hasSelectedCard ? { scale: 0.95 } : {}}
-          data-testid={`bonus-slot-${slotNumber}`}
-        >
-          <PlayingCard
-            card={card}
-            isPlayable={false}
-            isCovered={false}
-            size="md"
-          />
-        </motion.button>
-        <span className="text-amber-400 text-[9px] font-bold tracking-wide">{comboLabel} COMBO</span>
-      </div>
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.3 }}
+        data-testid={`bonus-slot-${slotNumber}`}
+      >
+        <PlayingCard
+          card={card}
+          isPlayable={false}
+          isCovered={false}
+          size="md"
+        />
+      </motion.div>
     );
   }
 
-  // Slot is active but no card yet (shouldn't happen with auto-generation, but fallback)
   return (
-    <div className="flex flex-col items-center gap-1">
-      <motion.div 
-        className="w-11 h-16 rounded-md flex items-center justify-center"
-        style={{
-          background: 'rgba(212, 175, 55, 0.1)',
-          border: '2px dashed #D4AF37',
-          boxShadow: '0 0 15px rgba(212, 175, 55, 0.3)',
-        }}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ 
-          opacity: 1, 
-          scale: 1,
-          boxShadow: ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
-        }}
-        transition={{ 
-          duration: 0.3,
-          boxShadow: { duration: 1.5, repeat: Infinity }
-        }}
-        data-testid={`bonus-slot-${slotNumber}`}
-      >
-        <span className="text-amber-400 text-[10px] font-bold">AKTIV</span>
-      </motion.div>
-      <span className="text-amber-400 text-[9px] font-bold tracking-wide">{comboLabel} COMBO</span>
-    </div>
+    <motion.div 
+      className="w-11 h-16 rounded-md"
+      style={{
+        background: 'rgba(212, 175, 55, 0.1)',
+        border: '2px dashed #D4AF37',
+        boxShadow: '0 0 15px rgba(212, 175, 55, 0.3)',
+      }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ 
+        opacity: 1, 
+        scale: 1,
+        boxShadow: ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
+      }}
+      transition={{ 
+        duration: 0.3,
+        boxShadow: { duration: 1.5, repeat: Infinity }
+      }}
+      data-testid={`bonus-slot-${slotNumber}`}
+    />
   );
 }

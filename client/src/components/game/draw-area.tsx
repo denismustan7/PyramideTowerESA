@@ -79,7 +79,6 @@ export function DrawArea({
         >
           {hasCards ? (
             <>
-              {/* Stacked card effect behind */}
               <div 
                 className="absolute inset-0 rounded-md transform translate-x-0.5 translate-y-0.5"
                 style={{
@@ -87,7 +86,6 @@ export function DrawArea({
                   border: '2px solid rgba(212, 175, 55, 0.4)',
                 }}
               />
-              {/* Main card back */}
               <div 
                 className="absolute inset-0 rounded-md overflow-hidden"
                 style={{
@@ -96,7 +94,6 @@ export function DrawArea({
                   boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                 }}
               >
-                {/* Diamond pattern */}
                 <div 
                   className="absolute inset-0"
                   style={{
@@ -106,12 +103,10 @@ export function DrawArea({
                     `
                   }}
                 />
-                {/* Inner border */}
                 <div 
                   className="absolute inset-1 rounded-sm"
                   style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}
                 />
-                {/* Center star */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <svg viewBox="0 0 24 24" className="w-5 h-5" style={{ color: '#D4AF37' }}>
                     <path 
@@ -120,13 +115,11 @@ export function DrawArea({
                     />
                   </svg>
                 </div>
-                {/* Bottom glow */}
                 <div 
                   className="absolute inset-0" 
                   style={{ background: 'linear-gradient(to top, rgba(212, 175, 55, 0.12), transparent 50%)' }}
                 />
               </div>
-              {/* Card count badge */}
               <div 
                 className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-black text-[10px] font-bold flex items-center justify-center shadow-lg"
                 style={{ 
@@ -147,17 +140,6 @@ export function DrawArea({
           )}
         </motion.button>
 
-        <AnimatePresence mode="wait">
-          <BonusSlot 
-            key="slot1"
-            card={bonusSlot1.card} 
-            isActive={bonusSlot1.isActive} 
-            slotNumber={1}
-            hasSelectedCard={!!selectedCardId}
-            onClick={() => onPlayOnSlot(1)}
-          />
-        </AnimatePresence>
-
         <div className="relative">
           {discardTop ? (
             <motion.div
@@ -176,11 +158,20 @@ export function DrawArea({
             <div 
               className="w-11 h-16 rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
-            >
-              <span className="text-gray-600 text-[10px]">Ablage</span>
-            </div>
+            />
           )}
         </div>
+
+        <AnimatePresence mode="wait">
+          <BonusSlot 
+            key="slot1"
+            card={bonusSlot1.card} 
+            isActive={bonusSlot1.isActive} 
+            slotNumber={1}
+            hasSelectedCard={false}
+            onClick={() => onPlayOnSlot(1)}
+          />
+        </AnimatePresence>
 
         <AnimatePresence mode="wait">
           <BonusSlot 
@@ -188,17 +179,11 @@ export function DrawArea({
             card={bonusSlot2.card} 
             isActive={bonusSlot2.isActive} 
             slotNumber={2}
-            hasSelectedCard={!!selectedCardId}
+            hasSelectedCard={false}
             onClick={() => onPlayOnSlot(2)}
           />
         </AnimatePresence>
-
-        <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
       </div>
-      
-      <p className="text-center text-gray-500 text-xs mt-3">
-        Tippe auf eine Karte mit +1 oder -1 Wert
-      </p>
     </div>
   );
 }

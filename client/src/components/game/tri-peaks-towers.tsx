@@ -33,13 +33,45 @@ interface TowerCardProps {
   onClick: () => void;
 }
 
+function CardBack() {
+  return (
+    <div 
+      className="w-9 h-12 rounded-md overflow-hidden flex-shrink-0 relative"
+      style={{
+        background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 25%, #1e3a5f 50%, #2c5282 75%, #1e3a5f 100%)',
+        border: '2px solid #D4AF37',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+      }}
+    >
+      <div 
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `
+            repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(212, 175, 55, 0.12) 3px, rgba(212, 175, 55, 0.12) 4px),
+            repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(212, 175, 55, 0.12) 3px, rgba(212, 175, 55, 0.12) 4px)
+          `
+        }}
+      />
+      <div 
+        className="absolute inset-1 rounded-sm"
+        style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}
+      />
+    </div>
+  );
+}
+
 function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick }: TowerCardProps) {
+  // If card is face down, show card back
+  if (!card.isFaceUp) {
+    return <CardBack />;
+  }
+
   return (
     <motion.button
       className={cn(
         "w-9 h-12 rounded-md flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0",
         "transition-all duration-150",
-        isPlayable ? "cursor-pointer" : "cursor-default",
+        isPlayable ? "cursor-pointer" : "cursor-default pointer-events-none",
         isSelected && "ring-2 ring-amber-400 ring-offset-1"
       )}
       style={{
@@ -165,7 +197,7 @@ export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCard
   };
 
   return (
-    <div className="flex items-end justify-center gap-4" style={{ marginTop: '10px' }}>
+    <div className="flex items-end justify-center gap-1" style={{ marginTop: '10px' }}>
       {Array.from({ length: NUM_TOWERS }, (_, towerIdx) => (
         <SingleTower
           key={`tower-${towerIdx}`}

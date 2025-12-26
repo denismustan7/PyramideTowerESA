@@ -9,6 +9,7 @@ import {
   INVALID_MOVE_PENALTY,
   TIME_BONUS_MULTIPLIER,
   BASE_TIME,
+  TIME_DECREASE_START_ROUND,
   TIME_DECREASE_PER_LEVEL,
   BONUS_SLOT_1_COMBO,
   BONUS_SLOT_2_COMBO,
@@ -140,22 +141,52 @@ function createTriPeaksTowers(cards: Card[]): { pyramid: PyramidNode[], towers: 
     }
   }
   
-  // Set initial visibility - individual card unlocking based on coverage
+  // Set initial visibility using depth-based system
+  // Helper to check if a card ID exists in pyramid
+  const cardExists = (cardId: string): boolean => {
+    return pyramid.some(n => n.card && n.card.id === cardId);
+  };
+  
+  // Helper to check if a node is covered
+  const isNodeCovered = (node: PyramidNode): boolean => {
+    return node.coveredBy.some(coverId => cardExists(coverId));
+  };
+  
+  // Helper to get depth (0 = uncovered, 1 = one layer back, etc.)
+  const getDepth = (node: PyramidNode): number => {
+    if (!isNodeCovered(node)) return 0;
+    
+    let maxCoverDepth = 0;
+    for (const coverId of node.coveredBy) {
+      const coverNode = pyramid.find(n => n.card && n.card.id === coverId);
+      if (coverNode) {
+        const coverDepth = getDepth(coverNode);
+        maxCoverDepth = Math.max(maxCoverDepth, coverDepth);
+      }
+    }
+    return maxCoverDepth + 1;
+  };
+  
   for (const node of pyramid) {
     if (!node.card) continue;
     
-    const hasCoveringCards = node.coveredBy.length > 0;
+    const depth = getDepth(node);
     
-    if (!hasCoveringCards) {
-      // Front row (no cards covering this one): face up, playable
+    if (depth === 0) {
+      // Uncovered: playable
       node.card.isFaceUp = true;
       node.card.isPlayable = true;
       node.isDimmed = false;
-    } else {
-      // Has covering cards: face up but dimmed, not playable
+    } else if (depth === 1) {
+      // One layer back: preview (face up, dimmed)
       node.card.isFaceUp = true;
       node.card.isPlayable = false;
       node.isDimmed = true;
+    } else {
+      // Two or more layers back: face down
+      node.card.isFaceUp = false;
+      node.card.isPlayable = false;
+      node.isDimmed = false;
     }
   }
   
@@ -189,7 +220,12 @@ export function initGame(level: number = 1, seed?: number): GameState {
   const drawPile = shuffled.slice(TOTAL_TABLEAU_CARDS + 1);
   
   // Calculate time based on level
-  const totalTime = Math.max(30, BASE_TIME - (level - 1) * TIME_DECREASE_PER_LEVEL);
+  // Rounds 1-4: 60 seconds, Round 5+: decreases by 5 seconds per round
+  let totalTime = BASE_TIME;
+  if (level >= TIME_DECREASE_START_ROUND) {
+    const decreaseRounds = level - TIME_DECREASE_START_ROUND + 1;
+    totalTime = Math.max(30, BASE_TIME - decreaseRounds * TIME_DECREASE_PER_LEVEL);
+  }
   
   return {
     pyramid,
@@ -503,18 +539,52 @@ export function applyInvalidMovePenalty(gameState: GameState): GameState {
 }
 
 // Update playability for tri-peaks after a card is removed
-// Individual unlocking: each card becomes playable when ALL its covering cards are removed
+// Layered visibility: playable cards are bright, next row is dimmed preview, back rows are face down
 function updateTriPeaksPlayability(pyramid: PyramidNode[]): PyramidNode[] {
+  // Helper to check if a card ID still exists in pyramid
+  const cardExists = (cardId: string): boolean => {
+    return pyramid.some(n => n.card && n.card.id === cardId);
+  };
+  
+  // Helper to check if a node is covered by any existing cards
+  const isNodeCovered = (node: PyramidNode): boolean => {
+    return node.coveredBy.some(coverId => cardExists(coverId));
+  };
+  
+  // Helper to get depth from front (0 = uncovered/playable, 1 = one layer back, etc.)
+  const getDepth = (node: PyramidNode): number => {
+    if (!isNodeCovered(node)) return 0;
+    
+    // Get max depth of covering cards + 1
+    let maxCoverDepth = 0;
+    for (const coverId of node.coveredBy) {
+      const coverNode = pyramid.find(n => n.card && n.card.id === coverId);
+      if (coverNode) {
+        const coverDepth = getDepth(coverNode);
+        maxCoverDepth = Math.max(maxCoverDepth, coverDepth);
+      }
+    }
+    return maxCoverDepth + 1;
+  };
+  
   return pyramid.map(node => {
     if (!node.card) return node;
     
-    // Check if any of the covering cards still exist
-    const isCovered = node.coveredBy.some(coverId => {
-      return pyramid.some(n => n.card && n.card.id === coverId);
-    });
+    const depth = getDepth(node);
     
-    if (isCovered) {
-      // Still covered by at least one card: visible but dimmed, not playable
+    if (depth === 0) {
+      // Uncovered: fully visible, playable
+      return {
+        ...node,
+        isDimmed: false,
+        card: {
+          ...node.card,
+          isFaceUp: true,
+          isPlayable: true
+        }
+      };
+    } else if (depth === 1) {
+      // One layer back: preview mode (face up but dimmed)
       return {
         ...node,
         isDimmed: true,
@@ -525,14 +595,14 @@ function updateTriPeaksPlayability(pyramid: PyramidNode[]): PyramidNode[] {
         }
       };
     } else {
-      // No covering cards remain: fully visible, playable
+      // Two or more layers back: face down
       return {
         ...node,
         isDimmed: false,
         card: {
           ...node.card,
-          isFaceUp: true,
-          isPlayable: true
+          isFaceUp: false,
+          isPlayable: false
         }
       };
     }

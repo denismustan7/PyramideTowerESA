@@ -119,20 +119,24 @@ export default function GamePage() {
     // If card is not playable (locked/dimmed), ignore click - no penalty
     if (!cardIsPlayable) return;
 
-    // Card is playable - first check if it can be played on main discard
+    // Auto-placement: Card goes to the first valid slot automatically
+    // Priority: 1. Main discard, 2. Bonus slot 1, 3. Bonus slot 2
+    
     if (canPlay(gameState, cardId)) {
       setGameState(prev => playCard(prev, cardId));
       setSelectedCardId(null);
       return;
     }
     
-    // Check if card can be played on any bonus slot
-    const canPlaySlot1 = canPlayOnBonusSlot(gameState, cardId, 1);
-    const canPlaySlot2 = canPlayOnBonusSlot(gameState, cardId, 2);
+    if (canPlayOnBonusSlot(gameState, cardId, 1)) {
+      setGameState(prev => playCardOnBonusSlot(prev, cardId, 1));
+      setSelectedCardId(null);
+      return;
+    }
     
-    if (canPlaySlot1 || canPlaySlot2) {
-      // Card fits at least one bonus slot - select it for placement
-      setSelectedCardId(cardId);
+    if (canPlayOnBonusSlot(gameState, cardId, 2)) {
+      setGameState(prev => playCardOnBonusSlot(prev, cardId, 2));
+      setSelectedCardId(null);
       return;
     }
     

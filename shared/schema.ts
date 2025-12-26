@@ -136,8 +136,9 @@ export const PERFECT_BONUS = 5000;
 export const DECK_BONUS_PER_CARD = 500; // 500 points per remaining draw pile card when level completed
 export const INVALID_MOVE_PENALTY = 200; // Points deducted for clicking playable card that doesn't fit
 export const TIME_BONUS_MULTIPLIER = 10;
-export const BASE_TIME = 120; // 2 minutes base time
-export const TIME_DECREASE_PER_LEVEL = 5;
+export const BASE_TIME = 60; // 60 seconds base time
+export const TIME_DECREASE_START_ROUND = 5; // Timer starts decreasing from round 5
+export const TIME_DECREASE_PER_LEVEL = 5; // 5 seconds less per round starting from round 5
 export const BONUS_SLOT_1_COMBO = 4; // Combo needed to unlock slot 1
 export const BONUS_SLOT_2_COMBO = 7; // Combo needed to unlock slot 2
 
