@@ -119,23 +119,31 @@ export default function GamePage() {
     // If card is not playable (locked/dimmed), ignore click - no penalty
     if (!cardIsPlayable) return;
 
-    // Auto-placement: Card goes to the first valid slot automatically
-    // Priority: 1. Main discard, 2. Bonus slot 1, 3. Bonus slot 2
+    // Auto-placement: Find all valid slots and pick randomly if multiple fit
+    type SlotOption = 'main' | 'slot1' | 'slot2';
+    const validSlots: SlotOption[] = [];
     
     if (canPlay(gameState, cardId)) {
-      setGameState(prev => playCard(prev, cardId));
-      setSelectedCardId(null);
-      return;
+      validSlots.push('main');
     }
-    
     if (canPlayOnBonusSlot(gameState, cardId, 1)) {
-      setGameState(prev => playCardOnBonusSlot(prev, cardId, 1));
-      setSelectedCardId(null);
-      return;
+      validSlots.push('slot1');
+    }
+    if (canPlayOnBonusSlot(gameState, cardId, 2)) {
+      validSlots.push('slot2');
     }
     
-    if (canPlayOnBonusSlot(gameState, cardId, 2)) {
-      setGameState(prev => playCardOnBonusSlot(prev, cardId, 2));
+    if (validSlots.length > 0) {
+      // Randomly select a slot if multiple options exist
+      const selectedSlot = validSlots[Math.floor(Math.random() * validSlots.length)];
+      
+      if (selectedSlot === 'main') {
+        setGameState(prev => playCard(prev, cardId));
+      } else if (selectedSlot === 'slot1') {
+        setGameState(prev => playCardOnBonusSlot(prev, cardId, 1));
+      } else {
+        setGameState(prev => playCardOnBonusSlot(prev, cardId, 2));
+      }
       setSelectedCardId(null);
       return;
     }
