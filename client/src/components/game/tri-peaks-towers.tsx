@@ -197,16 +197,20 @@ export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCard
   };
 
   return (
-    <div className="flex items-end justify-center gap-0" style={{ marginTop: '10px' }}>
+    <div className="flex items-end justify-center" style={{ marginTop: '10px' }}>
       {Array.from({ length: NUM_TOWERS }, (_, towerIdx) => (
-        <SingleTower
+        <div 
           key={`tower-${towerIdx}`}
-          nodes={getTowerNodes(towerIdx)}
-          towerIndex={towerIdx}
-          onCardClick={onCardClick}
-          selectedCardId={selectedCardId}
-          shakeCardId={shakeCardId}
-        />
+          style={{ marginLeft: towerIdx > 0 ? '-8px' : '0' }}
+        >
+          <SingleTower
+            nodes={getTowerNodes(towerIdx)}
+            towerIndex={towerIdx}
+            onCardClick={onCardClick}
+            selectedCardId={selectedCardId}
+            shakeCardId={shakeCardId}
+          />
+        </div>
       ))}
     </div>
   );
