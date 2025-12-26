@@ -169,6 +169,7 @@ export default function MultiplayerGamePage() {
   }, []);
 
   const handleWSMessage = (message: { type: string; payload?: any }) => {
+    console.log(`[WS] Received: ${message.type}`, message.payload);
     switch (message.type) {
       case 'opponent_update':
         setPlayers(prev => {
@@ -318,7 +319,7 @@ export default function MultiplayerGamePage() {
         p.id === playerId ? { ...p, finished: true, score: state.score } : p
       ));
       
-      wsRef.current.send(JSON.stringify({
+      const msg = {
         type: 'round_finished',
         payload: {
           playerId,
@@ -326,7 +327,9 @@ export default function MultiplayerGamePage() {
           score: state.score,
           finishReason
         }
-      }));
+      };
+      console.log(`[WS] Sending: round_finished`, msg.payload);
+      wsRef.current.send(JSON.stringify(msg));
       
       // Show toast based on finish reason
       if (finishReason === 'won') {
@@ -567,49 +570,40 @@ export default function MultiplayerGamePage() {
         isPaused={false}
       />
 
-      {/* Circular Round Indicator */}
-      <div className="absolute top-16 left-2 z-30">
-        <div 
-          className="relative w-12 h-12 flex items-center justify-center"
-          style={{
-            background: 'linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(0, 8, 20, 0.95))',
-            borderRadius: '50%',
-            border: '2px solid rgba(212, 175, 55, 0.4)',
-            boxShadow: '0 0 15px rgba(212, 175, 55, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.5)'
-          }}
-        >
-          {/* Progress ring */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90">
-            <circle
-              cx="24"
-              cy="24"
-              r="20"
-              fill="none"
-              stroke="rgba(212, 175, 55, 0.2)"
-              strokeWidth="3"
+      {/* Compact Round Indicator */}
+      <div 
+        className="absolute top-14 left-2 z-30 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full"
+        style={{
+          background: 'rgba(0, 12, 24, 0.85)',
+          border: '1px solid rgba(212, 175, 55, 0.3)',
+          backdropFilter: 'blur(4px)'
+        }}
+        data-testid="round-indicator"
+      >
+        {/* Progress dots */}
+        <div className="flex gap-0.5">
+          {Array.from({ length: totalRounds }, (_, i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full transition-all duration-300"
+              style={{
+                background: i < currentRound 
+                  ? '#D4AF37' 
+                  : i === currentRound - 1 
+                    ? '#D4AF37' 
+                    : 'rgba(212, 175, 55, 0.25)',
+                boxShadow: i < currentRound ? '0 0 4px rgba(212, 175, 55, 0.5)' : 'none'
+              }}
             />
-            <circle
-              cx="24"
-              cy="24"
-              r="20"
-              fill="none"
-              stroke="#D4AF37"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={`${(currentRound / totalRounds) * 125.6} 125.6`}
-              style={{ transition: 'stroke-dasharray 0.5s ease' }}
-            />
-          </svg>
-          {/* Round number */}
-          <div className="text-center z-10">
-            <span className="text-sm font-bold" style={{ color: '#D4AF37' }}>
-              {currentRound}
-            </span>
-            <span className="text-[8px] block -mt-0.5" style={{ color: 'rgba(212, 175, 55, 0.7)' }}>
-              /{totalRounds}
-            </span>
-          </div>
+          ))}
         </div>
+        {/* Round text */}
+        <span 
+          className="text-xs font-medium ml-0.5"
+          style={{ color: '#D4AF37' }}
+        >
+          R{currentRound}
+        </span>
       </div>
 
       <LiveScoreboard

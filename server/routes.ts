@@ -201,6 +201,11 @@ function getRoomState(room: Room) {
 }
 
 function getActivePlayers(room: Room): RoomPlayer[] {
+  return Array.from(room.players.values()).filter(p => !p.isEliminated);
+}
+
+// Get players who are still connected (for determining if round can proceed)
+function getConnectedActivePlayers(room: Room): RoomPlayer[] {
   return Array.from(room.players.values()).filter(p => 
     !p.isEliminated && p.ws.readyState === WebSocket.OPEN
   );
@@ -528,13 +533,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 }
               }, currentPlayerId);
 
-              // Check if all active players have finished the round
-              const activePlayers = getActivePlayers(room);
-              console.log(`[Round] Active players: ${activePlayers.length}, Finished: ${activePlayers.filter(p => p.finished).map(p => p.name).join(', ')}, Not finished: ${activePlayers.filter(p => !p.finished).map(p => p.name).join(', ')}`);
-              const allFinished = activePlayers.every(p => p.finished);
+              // Check if all connected active players have finished the round
+              // Use connectedActivePlayers so disconnected players don't block progress
+              const connectedPlayers = getConnectedActivePlayers(room);
+              const allActivePlayers = getActivePlayers(room);
+              console.log(`[Round] Connected: ${connectedPlayers.length}, Total active: ${allActivePlayers.length}`);
+              console.log(`[Round] Finished: ${connectedPlayers.filter(p => p.finished).map(p => p.name).join(', ')}, Not finished: ${connectedPlayers.filter(p => !p.finished).map(p => p.name).join(', ')}`);
+              
+              // Round ends if all connected players are finished (disconnected players are treated as finished)
+              const allConnectedFinished = connectedPlayers.every(p => p.finished);
+              const allFinished = allConnectedFinished && connectedPlayers.length > 0;
 
               if (allFinished) {
-                console.log(`[Round] All ${activePlayers.length} active players finished! Transitioning to round_end`);
+                console.log(`[Round] All ${connectedPlayers.length} connected players finished! Transitioning to round_end`);
                 // Clear the server-side timer since all finished
                 clearRoundTimer(currentRoomCode);
                 
