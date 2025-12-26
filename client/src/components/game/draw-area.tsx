@@ -67,7 +67,7 @@ export function DrawArea({
         <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <motion.button
-          className={`relative w-9 h-13 sm:w-11 sm:h-16 rounded-md flex items-center justify-center ${
+          className={`relative w-11 h-15 sm:w-12 sm:h-17 rounded-md flex items-center justify-center ${
             hasCards && !disabled
               ? 'cursor-pointer'
               : 'cursor-not-allowed'
@@ -108,7 +108,7 @@ export function DrawArea({
                   style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5" style={{ color: '#D4AF37' }}>
+                  <svg viewBox="0 0 24 24" className="w-6 h-6" style={{ color: '#D4AF37' }}>
                     <path 
                       fill="currentColor" 
                       d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
@@ -151,12 +151,12 @@ export function DrawArea({
               <PlayingCard
                 card={discardTop}
                 isPlayable={false}
-                size="sm"
+                size="md"
               />
             </motion.div>
           ) : (
             <div 
-              className="w-9 h-13 sm:w-11 sm:h-16 rounded-md flex items-center justify-center"
+              className="w-11 h-15 sm:w-12 sm:h-17 rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
             />
           )}
