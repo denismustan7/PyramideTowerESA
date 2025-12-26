@@ -8,9 +8,42 @@ interface DrawAreaProps {
   bonusSlot1: BonusSlotState;
   bonusSlot2: BonusSlotState;
   selectedCardId: string | null;
+  timeRemaining: number;
+  maxTime: number;
   onDraw: () => void;
   onPlayOnSlot: (slotNumber: 1 | 2) => void;
   disabled?: boolean;
+}
+
+function TimerBar({ timeRemaining, maxTime }: { timeRemaining: number; maxTime: number }) {
+  const percentage = Math.max(0, Math.min(100, (timeRemaining / maxTime) * 100));
+  
+  const getColor = () => {
+    if (percentage > 50) return '#22c55e';
+    if (percentage > 25) return '#eab308';
+    return '#ef4444';
+  };
+
+  return (
+    <div 
+      className="w-3 h-20 rounded-full overflow-hidden relative"
+      style={{ 
+        background: 'rgba(0, 0, 0, 0.5)',
+        border: '1px solid rgba(100, 100, 100, 0.3)'
+      }}
+    >
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 rounded-full"
+        style={{ 
+          background: getColor(),
+          boxShadow: `0 0 10px ${getColor()}, 0 0 20px ${getColor()}40`
+        }}
+        initial={false}
+        animate={{ height: `${percentage}%` }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      />
+    </div>
+  );
 }
 
 export function DrawArea({ 
@@ -19,6 +52,8 @@ export function DrawArea({
   bonusSlot1, 
   bonusSlot2,
   selectedCardId,
+  timeRemaining,
+  maxTime,
   onDraw,
   onPlayOnSlot,
   disabled = false 
@@ -39,6 +74,8 @@ export function DrawArea({
             onClick={() => onPlayOnSlot(1)}
           />
         </AnimatePresence>
+
+        <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <motion.button
           className={`relative w-16 h-22 rounded-lg flex items-center justify-center ${
@@ -123,6 +160,8 @@ export function DrawArea({
             </div>
           )}
         </div>
+
+        <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <AnimatePresence mode="wait">
           <BonusSlot 

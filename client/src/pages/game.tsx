@@ -222,6 +222,8 @@ export default function GamePage() {
         bonusSlot1={gameState.bonusSlot1}
         bonusSlot2={gameState.bonusSlot2}
         selectedCardId={selectedCardId}
+        timeRemaining={gameState.timeRemaining}
+        maxTime={60}
         onDraw={handleDraw}
         onPlayOnSlot={handlePlayOnBonusSlot}
         disabled={isPaused || gameState.phase !== 'playing'}
