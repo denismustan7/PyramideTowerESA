@@ -291,65 +291,103 @@ export function canPlay(gameState: GameState, cardId: string): boolean {
 
 // Play a card from the pyramid
 export function playCard(gameState: GameState, cardId: string): GameState {
+  console.log(`[MAIN] === playCard called ===`);
+  console.log(`[MAIN] Input - Discard top: ${gameState.discardPile.length > 0 ? gameState.discardPile[gameState.discardPile.length-1].value : 'empty'}, Slot1: ${gameState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${gameState.bonusSlot2.card?.value ?? 'null'}`);
+  
   if (!canPlay(gameState, cardId)) {
     return gameState; // Invalid move
   }
   
-  const newState = { ...gameState };
-  newState.pyramid = gameState.pyramid.map(node => ({ ...node }));
-  newState.discardPile = [...gameState.discardPile];
-  
-  // IMPORTANT: Deep copy both bonus slots to prevent mutation
-  newState.bonusSlot1 = { ...gameState.bonusSlot1, card: gameState.bonusSlot1.card ? { ...gameState.bonusSlot1.card } : null };
-  newState.bonusSlot2 = { ...gameState.bonusSlot2, card: gameState.bonusSlot2.card ? { ...gameState.bonusSlot2.card } : null };
-  
-  let playedCard: Card | null = null;
-  
-  // Find and remove the card from pyramid
-  for (let nodeIdx = 0; nodeIdx < newState.pyramid.length; nodeIdx++) {
-    const node = newState.pyramid[nodeIdx];
-    if (node.card && node.card.id === cardId) {
-      playedCard = { ...node.card };
-      newState.pyramid[nodeIdx] = { ...node, card: null };
+  // Find the card in pyramid first
+  let foundCard: Card | undefined;
+  let foundIndex = -1;
+  for (let i = 0; i < gameState.pyramid.length; i++) {
+    if (gameState.pyramid[i].card?.id === cardId) {
+      foundCard = gameState.pyramid[i].card!;
+      foundIndex = i;
       break;
     }
   }
   
-  if (!playedCard) return gameState;
+  if (!foundCard || foundIndex === -1) return gameState;
   
-  // Add card to discard pile
-  playedCard.isFaceUp = true;
-  newState.discardPile.push(playedCard);
+  console.log(`[MAIN] Playing card value: ${foundCard.value} to main discard`);
   
-  // Increase combo
-  newState.combo++;
-  newState.maxCombo = Math.max(newState.maxCombo, newState.combo);
+  // Create played card copy
+  const playedCard: Card = { ...foundCard, isFaceUp: true };
   
-  // Calculate score for this play
-  const points = BASE_POINTS * newState.combo;
-  newState.score += points;
+  // Create new pyramid without the played card
+  const newPyramid = gameState.pyramid.map((node, idx) => 
+    idx === foundIndex ? { ...node, card: null } : { ...node }
+  );
   
-  // Update cards remaining
-  newState.cardsRemaining--;
+  // Create new discard pile with played card
+  const newDiscardPile = [...gameState.discardPile, playedCard];
   
-  // Update playability and visibility of other cards
-  newState.pyramid = updateTriPeaksPlayability(newState.pyramid);
+  // FREEZE bonus slots - create completely independent copies
+  const frozenSlot1: BonusSlotState = {
+    isActive: gameState.bonusSlot1.isActive,
+    card: gameState.bonusSlot1.card ? {
+      id: gameState.bonusSlot1.card.id,
+      suit: gameState.bonusSlot1.card.suit,
+      value: gameState.bonusSlot1.card.value,
+      isFaceUp: gameState.bonusSlot1.card.isFaceUp,
+      isPlayable: gameState.bonusSlot1.card.isPlayable
+    } : null
+  };
   
-  // Sync towers with updated pyramid
-  newState.towers = rebuildTowersFromPyramid(newState.pyramid);
+  const frozenSlot2: BonusSlotState = {
+    isActive: gameState.bonusSlot2.isActive,
+    card: gameState.bonusSlot2.card ? {
+      id: gameState.bonusSlot2.card.id,
+      suit: gameState.bonusSlot2.card.suit,
+      value: gameState.bonusSlot2.card.value,
+      isFaceUp: gameState.bonusSlot2.card.isFaceUp,
+      isPlayable: gameState.bonusSlot2.card.isPlayable
+    } : null
+  };
   
-  // Check for win condition
-  if (newState.cardsRemaining === 0) {
-    newState.phase = 'won';
-    // Deck bonus: 500 points per remaining draw pile card
-    if (newState.drawPile.length > 0) {
-      newState.score += newState.drawPile.length * DECK_BONUS_PER_CARD;
+  console.log(`[MAIN] After freeze - Slot1: ${frozenSlot1.card?.value ?? 'null'}, Slot2: ${frozenSlot2.card?.value ?? 'null'}`);
+  
+  // Update combo
+  const newCombo = gameState.combo + 1;
+  const newMaxCombo = Math.max(gameState.maxCombo, newCombo);
+  const points = BASE_POINTS * newCombo;
+  
+  // Update pyramid playability
+  const updatedPyramid = updateTriPeaksPlayability(newPyramid);
+  const updatedTowers = rebuildTowersFromPyramid(updatedPyramid);
+  
+  // Check for win
+  const newCardsRemaining = gameState.cardsRemaining - 1;
+  let newPhase = gameState.phase;
+  let newScore = gameState.score + points;
+  
+  if (newCardsRemaining === 0) {
+    newPhase = 'won';
+    if (gameState.drawPile.length > 0) {
+      newScore += gameState.drawPile.length * DECK_BONUS_PER_CARD;
     }
-    // Time bonus
-    newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
+    newScore += gameState.timeRemaining * TIME_BONUS_MULTIPLIER;
   }
   
+  // Build the new state with frozen slots
+  const newState: GameState = {
+    ...gameState,
+    pyramid: updatedPyramid,
+    towers: updatedTowers,
+    discardPile: newDiscardPile,
+    bonusSlot1: frozenSlot1,
+    bonusSlot2: frozenSlot2,
+    combo: newCombo,
+    maxCombo: newMaxCombo,
+    score: newScore,
+    cardsRemaining: newCardsRemaining,
+    phase: newPhase
+  };
+  
   // Check and activate bonus slots based on combo - generate a card automatically
+  // Only activate if not already active
   if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
     const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
     newState.bonusSlot1 = { card: bonusCard, isActive: true };
@@ -361,6 +399,7 @@ export function playCard(gameState: GameState, cardId: string): GameState {
     newState.bonusSlot2ActivationCount++;
   }
   
+  console.log(`[MAIN] FINAL OUTPUT - Discard top: ${newState.discardPile[newState.discardPile.length-1].value}, Slot1: ${newState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${newState.bonusSlot2.card?.value ?? 'null'}`);
   return newState;
 }
 
