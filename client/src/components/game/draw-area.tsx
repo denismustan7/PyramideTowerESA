@@ -162,27 +162,33 @@ export function DrawArea({
           )}
         </div>
 
-        <AnimatePresence mode="wait">
-          <BonusSlot 
-            key="slot1"
-            card={bonusSlot1.card} 
-            isActive={bonusSlot1.isActive} 
-            slotNumber={1}
-            hasSelectedCard={false}
-            onClick={() => onPlayOnSlot(1)}
-          />
-        </AnimatePresence>
+        <div className="flex flex-col items-center">
+          <span className="text-[8px] text-amber-500/60 mb-0.5">S1</span>
+          <AnimatePresence mode="wait">
+            <BonusSlot 
+              key={`slot1-${bonusSlot1.card?.id ?? 'empty'}`}
+              card={bonusSlot1.card} 
+              isActive={bonusSlot1.isActive} 
+              slotNumber={1}
+              hasSelectedCard={false}
+              onClick={() => onPlayOnSlot(1)}
+            />
+          </AnimatePresence>
+        </div>
 
-        <AnimatePresence mode="wait">
-          <BonusSlot 
-            key="slot2"
-            card={bonusSlot2.card} 
-            isActive={bonusSlot2.isActive} 
-            slotNumber={2}
-            hasSelectedCard={false}
-            onClick={() => onPlayOnSlot(2)}
-          />
-        </AnimatePresence>
+        <div className="flex flex-col items-center">
+          <span className="text-[8px] text-amber-500/60 mb-0.5">S2</span>
+          <AnimatePresence mode="wait">
+            <BonusSlot 
+              key={`slot2-${bonusSlot2.card?.id ?? 'empty'}`}
+              card={bonusSlot2.card} 
+              isActive={bonusSlot2.isActive} 
+              slotNumber={2}
+              hasSelectedCard={false}
+              onClick={() => onPlayOnSlot(2)}
+            />
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
