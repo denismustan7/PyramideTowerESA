@@ -125,7 +125,7 @@ export const TOWER_ROWS = [1, 2, 3, 4]; // Cards per row in each tower (back to 
 export const CARDS_PER_TOWER = 10; // 1+2+3+4 = 10 cards per tower
 export const NUM_TOWERS = 3;
 export const TOTAL_TABLEAU_CARDS = 30; // 3 towers × 10 cards = 30 cards
-export const DRAW_PILE_SIZE = 21; // 21 cards in draw pile
+export const DRAW_PILE_SIZE = 23; // 23 cards in draw pile
 
 // Legacy constants for backwards compatibility
 export const PYRAMID_ROWS = TOWER_ROWS;
