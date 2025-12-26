@@ -11,14 +11,18 @@ import {
   drawCard, 
   tickTimer, 
   canPlay, 
+  canPlayOnBonusSlot,
+  playCardOnBonusSlot,
+  isCardPlayable,
+  applyInvalidMovePenalty,
   getDiscardTop,
   getRank
 } from "@/lib/gameEngine";
+import { INVALID_MOVE_PENALTY } from "@shared/schema";
 import type { GameState, MultiplayerPlayer } from "@shared/schema";
 import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
 import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
-import { playCardOnBonusSlot } from "@/lib/gameEngine";
 
 interface OpponentProgress {
   id: string;
@@ -119,6 +123,7 @@ export default function MultiplayerGamePage() {
   const [opponents, setOpponents] = useState<OpponentProgress[]>([]);
   const [shakeCardId, setShakeCardId] = useState<string | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [showPenalty, setShowPenalty] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [finalRanking, setFinalRanking] = useState<OpponentProgress[]>([]);
@@ -234,17 +239,60 @@ export default function MultiplayerGamePage() {
   const handleCardClick = useCallback((cardId: string) => {
     if (!gameState || gameState.phase !== 'playing') return;
 
+    // Check if this card is playable (not locked/dimmed)
+    const cardIsPlayable = isCardPlayable(gameState, cardId);
+    
+    // If card is not playable (locked/dimmed), ignore click - no penalty
+    if (!cardIsPlayable) return;
+
+    // Auto-placement: Find all valid slots and pick randomly if multiple fit
+    type SlotOption = 'main' | 'slot1' | 'slot2';
+    const validSlots: SlotOption[] = [];
+    
     if (canPlay(gameState, cardId)) {
+      validSlots.push('main');
+    }
+    if (canPlayOnBonusSlot(gameState, cardId, 1)) {
+      validSlots.push('slot1');
+    }
+    if (canPlayOnBonusSlot(gameState, cardId, 2)) {
+      validSlots.push('slot2');
+    }
+    
+    if (validSlots.length > 0) {
+      // Randomly select a slot if multiple options exist
+      const selectedSlot = validSlots[Math.floor(Math.random() * validSlots.length)];
+      
       setGameState(prev => {
         if (!prev) return prev;
-        const newState = playCard(prev, cardId);
+        let newState: GameState;
+        if (selectedSlot === 'main') {
+          newState = playCard(prev, cardId);
+        } else if (selectedSlot === 'slot1') {
+          newState = playCardOnBonusSlot(prev, cardId, 1);
+        } else {
+          newState = playCardOnBonusSlot(prev, cardId, 2);
+        }
         sendGameUpdate(newState);
         return newState;
       });
-    } else {
-      setShakeCardId(cardId);
-      setTimeout(() => setShakeCardId(null), 300);
+      setSelectedCardId(null);
+      return;
     }
+    
+    // Card doesn't fit ANY available slot - apply penalty!
+    setGameState(prev => {
+      if (!prev) return prev;
+      const newState = applyInvalidMovePenalty(prev);
+      sendGameUpdate(newState);
+      return newState;
+    });
+    setShakeCardId(cardId);
+    setShowPenalty(true);
+    setTimeout(() => {
+      setShakeCardId(null);
+      setShowPenalty(false);
+    }, 800);
   }, [gameState, sendGameUpdate]);
 
   const handleDraw = useCallback(() => {
@@ -270,13 +318,18 @@ export default function MultiplayerGamePage() {
   const handlePlayOnBonusSlot = useCallback((slotNumber: 1 | 2) => {
     if (!gameState || gameState.phase !== 'playing' || !selectedCardId) return;
 
-    setGameState(prev => {
-      if (!prev) return prev;
-      const newState = playCardOnBonusSlot(prev, selectedCardId, slotNumber);
-      sendGameUpdate(newState);
-      return newState;
-    });
-    setSelectedCardId(null);
+    if (canPlayOnBonusSlot(gameState, selectedCardId, slotNumber)) {
+      setGameState(prev => {
+        if (!prev) return prev;
+        const newState = playCardOnBonusSlot(prev, selectedCardId, slotNumber);
+        sendGameUpdate(newState);
+        return newState;
+      });
+      setSelectedCardId(null);
+    } else {
+      setShakeCardId(selectedCardId);
+      setTimeout(() => setShakeCardId(null), 300);
+    }
   }, [gameState, selectedCardId, sendGameUpdate]);
 
   const handleGoHome = () => {
@@ -325,6 +378,28 @@ export default function MultiplayerGamePage() {
       </div>
 
       <OpponentPanel opponents={opponents} />
+
+      <AnimatePresence>
+        {showPenalty && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 1.5 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none"
+            data-testid="penalty-display"
+          >
+            <span 
+              className="text-3xl font-bold"
+              style={{ 
+                color: '#ef4444',
+                textShadow: '0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.4)'
+              }}
+            >
+              -{INVALID_MOVE_PENALTY}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden">
         <TriPeaksTowers
