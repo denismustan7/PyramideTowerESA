@@ -436,92 +436,102 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
     return gameState;
   }
   
-  // DEBUG: Log before state changes
-  console.log(`[playCardOnBonusSlot] Playing on slot ${slotNumber}`);
-  console.log(`[playCardOnBonusSlot] BEFORE - Slot1: ${gameState.bonusSlot1.card?.value}, Slot2: ${gameState.bonusSlot2.card?.value}`);
-  
-  const newState = { ...gameState };
-  newState.pyramid = gameState.pyramid.map(node => ({ ...node }));
-  
-  // IMPORTANT: Deep copy both bonus slots to prevent mutation of unrelated slot
-  newState.bonusSlot1 = { ...gameState.bonusSlot1, card: gameState.bonusSlot1.card ? { ...gameState.bonusSlot1.card } : null };
-  newState.bonusSlot2 = { ...gameState.bonusSlot2, card: gameState.bonusSlot2.card ? { ...gameState.bonusSlot2.card } : null };
-  
-  console.log(`[playCardOnBonusSlot] After deep copy - Slot1: ${newState.bonusSlot1.card?.value}, Slot2: ${newState.bonusSlot2.card?.value}`);
-  
+  // Find and extract the card from pyramid first
   let playedCard: Card | null = null;
-  
-  // Find and remove the card from pyramid
-  for (let nodeIdx = 0; nodeIdx < newState.pyramid.length; nodeIdx++) {
-    const node = newState.pyramid[nodeIdx];
+  const newPyramid = gameState.pyramid.map(node => {
     if (node.card && node.card.id === cardId) {
-      playedCard = { ...node.card };
-      newState.pyramid[nodeIdx] = { ...node, card: null };
-      break;
+      playedCard = { ...node.card, isFaceUp: true };
+      return { ...node, card: null };
     }
-  }
+    return { ...node };
+  });
   
   if (!playedCard) return gameState;
   
-  // Place card on bonus slot (replaces the existing card)
-  playedCard.isFaceUp = true;
-  if (slotNumber === 1) {
-    // Add old bonus slot card to discard pile before replacing
-    if (newState.bonusSlot1.card) {
-      newState.discardPile = [...gameState.discardPile, newState.bonusSlot1.card];
-    }
-    newState.bonusSlot1 = { card: playedCard, isActive: true };
-  } else {
-    // Add old bonus slot card to discard pile before replacing
-    if (newState.bonusSlot2.card) {
-      newState.discardPile = [...gameState.discardPile, newState.bonusSlot2.card];
-    }
-    newState.bonusSlot2 = { card: playedCard, isActive: true };
+  // Preserve the OTHER slot exactly as-is (completely frozen)
+  const preservedSlot1: BonusSlotState = slotNumber === 1 
+    ? { card: playedCard, isActive: true }  // Replace slot 1 with played card
+    : { 
+        isActive: gameState.bonusSlot1.isActive,
+        card: gameState.bonusSlot1.card ? {
+          id: gameState.bonusSlot1.card.id,
+          suit: gameState.bonusSlot1.card.suit,
+          value: gameState.bonusSlot1.card.value,
+          isFaceUp: gameState.bonusSlot1.card.isFaceUp,
+          isPlayable: gameState.bonusSlot1.card.isPlayable
+        } : null
+      };  // Keep slot 1 frozen
+  
+  const preservedSlot2: BonusSlotState = slotNumber === 2 
+    ? { card: playedCard, isActive: true }  // Replace slot 2 with played card
+    : {
+        isActive: gameState.bonusSlot2.isActive,
+        card: gameState.bonusSlot2.card ? {
+          id: gameState.bonusSlot2.card.id,
+          suit: gameState.bonusSlot2.card.suit,
+          value: gameState.bonusSlot2.card.value,
+          isFaceUp: gameState.bonusSlot2.card.isFaceUp,
+          isPlayable: gameState.bonusSlot2.card.isPlayable
+        } : null
+      };  // Keep slot 2 frozen
+  
+  // Handle discard pile - add old card from the slot we're replacing
+  let newDiscardPile = [...gameState.discardPile];
+  if (slotNumber === 1 && gameState.bonusSlot1.card) {
+    newDiscardPile.push({ ...gameState.bonusSlot1.card });
+  } else if (slotNumber === 2 && gameState.bonusSlot2.card) {
+    newDiscardPile.push({ ...gameState.bonusSlot2.card });
   }
   
-  // Increase combo
-  newState.combo++;
-  newState.maxCombo = Math.max(newState.maxCombo, newState.combo);
+  // Update combo
+  const newCombo = gameState.combo + 1;
+  const newMaxCombo = Math.max(gameState.maxCombo, newCombo);
+  const points = BASE_POINTS * newCombo;
   
-  // Calculate score for this play
-  const points = BASE_POINTS * newState.combo;
-  newState.score += points;
+  // Update pyramid playability
+  const updatedPyramid = updateTriPeaksPlayability(newPyramid);
+  const updatedTowers = rebuildTowersFromPyramid(updatedPyramid);
   
-  // Update cards remaining
-  newState.cardsRemaining--;
+  // Check for win
+  const newCardsRemaining = gameState.cardsRemaining - 1;
+  let newPhase = gameState.phase;
+  let newScore = gameState.score + points;
   
-  // Update playability of other cards
-  newState.pyramid = updateTriPeaksPlayability(newState.pyramid);
-  
-  // Sync towers with updated pyramid
-  newState.towers = rebuildTowersFromPyramid(newState.pyramid);
-  
-  // Check for win condition
-  if (newState.cardsRemaining === 0) {
-    newState.phase = 'won';
-    // Deck bonus: 500 points per remaining draw pile card
-    if (newState.drawPile.length > 0) {
-      newState.score += newState.drawPile.length * DECK_BONUS_PER_CARD;
+  if (newCardsRemaining === 0) {
+    newPhase = 'won';
+    if (gameState.drawPile.length > 0) {
+      newScore += gameState.drawPile.length * DECK_BONUS_PER_CARD;
     }
-    newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
+    newScore += gameState.timeRemaining * TIME_BONUS_MULTIPLIER;
   }
   
-  // Check and activate bonus slots based on combo - generate a card automatically
-  // NOTE: This should NOT change an already-active slot
+  // Build new state - ONLY the target slot gets modified, other slot stays frozen
+  const newState: GameState = {
+    ...gameState,
+    pyramid: updatedPyramid,
+    towers: updatedTowers,
+    discardPile: newDiscardPile,
+    bonusSlot1: preservedSlot1,
+    bonusSlot2: preservedSlot2,
+    combo: newCombo,
+    maxCombo: newMaxCombo,
+    score: newScore,
+    cardsRemaining: newCardsRemaining,
+    phase: newPhase
+  };
+  
+  // Activate bonus slots ONLY if they're not already active
+  // This should never change an already-active slot's card
   if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
-    console.log(`[playCardOnBonusSlot] Activating slot 1 because combo=${newState.combo} and slot1 is not active`);
     const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
     newState.bonusSlot1 = { card: bonusCard, isActive: true };
     newState.bonusSlot1ActivationCount++;
   }
   if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
-    console.log(`[playCardOnBonusSlot] Activating slot 2 because combo=${newState.combo} and slot2 is not active`);
     const bonusCard = generateBonusCard(newState.gameSeed, 2, newState.bonusSlot2ActivationCount);
     newState.bonusSlot2 = { card: bonusCard, isActive: true };
     newState.bonusSlot2ActivationCount++;
   }
-  
-  console.log(`[playCardOnBonusSlot] FINAL - Slot1: ${newState.bonusSlot1.card?.value} (active=${newState.bonusSlot1.isActive}), Slot2: ${newState.bonusSlot2.card?.value} (active=${newState.bonusSlot2.isActive})`);
   
   return newState;
 }
