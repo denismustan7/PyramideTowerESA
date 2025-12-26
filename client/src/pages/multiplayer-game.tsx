@@ -3,7 +3,6 @@ import { useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Trophy, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { 
   initGameWithSeed,
@@ -19,17 +18,23 @@ import {
   getRank
 } from "@/lib/gameEngine";
 import { INVALID_MOVE_PENALTY } from "@shared/schema";
-import type { GameState, MultiplayerPlayer } from "@shared/schema";
+import type { GameState } from "@shared/schema";
 import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
 import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
+import { LiveScoreboard } from "@/components/game/live-scoreboard";
+import { RoundTransitionOverlay } from "@/components/game/round-transition-overlay";
+import { SpectatorBar } from "@/components/game/spectator-bar";
 
-interface OpponentProgress {
+interface PlayerState {
   id: string;
   name: string;
   score: number;
+  totalScore: number;
   cardsRemaining: number;
   finished: boolean;
+  isEliminated: boolean;
+  isReady?: boolean;
 }
 
 function MagicalParticles() {
@@ -70,45 +75,6 @@ function MagicalParticles() {
   );
 }
 
-function OpponentPanel({ opponents }: { opponents: OpponentProgress[] }) {
-  const totalCards = 28;
-  
-  return (
-    <div className="fixed right-2 top-1/2 -translate-y-1/2 z-30 space-y-2 w-32">
-      {opponents.map((opp) => {
-        const progress = ((totalCards - opp.cardsRemaining) / totalCards) * 100;
-        return (
-          <motion.div
-            key={opp.id}
-            initial={{ x: 50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className={`p-2 rounded-lg text-xs ${
-              opp.finished 
-                ? 'bg-amber-500/20 border border-amber-500/50' 
-                : 'bg-gray-800/80 border border-gray-700/50'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className={`truncate ${opp.finished ? 'text-amber-400' : 'text-gray-300'}`}>
-                {opp.name}
-              </span>
-              {opp.finished && <Trophy className="w-3 h-3 text-amber-400" />}
-            </div>
-            <Progress 
-              value={progress} 
-              className="h-1.5 bg-gray-700"
-            />
-            <div className="flex justify-between mt-1 text-gray-500">
-              <span>{opp.score.toLocaleString()}</span>
-              <span>{opp.cardsRemaining} ubrig</span>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function MultiplayerGamePage() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -117,27 +83,53 @@ export default function MultiplayerGamePage() {
   const params = new URLSearchParams(search);
   const roomCode = params.get('room') || '';
   const playerId = params.get('player') || '';
-  const seed = parseInt(params.get('seed') || '0', 10);
+  const initialSeed = parseInt(params.get('seed') || '0', 10);
+  const initialRound = parseInt(params.get('round') || '1', 10);
+  const initialTotalRounds = parseInt(params.get('totalRounds') || '8', 10);
+  const initialRoundTime = parseInt(params.get('roundTime') || '60', 10);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [opponents, setOpponents] = useState<OpponentProgress[]>([]);
+  const [players, setPlayers] = useState<PlayerState[]>([]);
   const [shakeCardId, setShakeCardId] = useState<string | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [showPenalty, setShowPenalty] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [winner, setWinner] = useState<string | null>(null);
-  const [finalRanking, setFinalRanking] = useState<OpponentProgress[]>([]);
+  const [finalRanking, setFinalRanking] = useState<PlayerState[]>([]);
+  
+  const [currentRound, setCurrentRound] = useState(initialRound);
+  const [totalRounds, setTotalRounds] = useState(initialTotalRounds);
+  const [roundTimeLimit, setRoundTimeLimit] = useState(initialRoundTime);
+  const [showRoundEnd, setShowRoundEnd] = useState(false);
+  const [roundEndData, setRoundEndData] = useState<{
+    round: number;
+    standings: PlayerState[];
+    nextRound: number;
+    nextRoundTime: number;
+    eliminatedId?: string;
+    eliminatedName?: string;
+  } | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [readyPlayers, setReadyPlayers] = useState<string[]>([]);
+  
+  const [isEliminated, setIsEliminated] = useState(false);
+  const [isSpectating, setIsSpectating] = useState(false);
+  const [spectatingPlayerId, setSpectatingPlayerId] = useState<string | null>(null);
+  const [spectatingPlayerName, setSpectatingPlayerName] = useState<string | null>(null);
+  
+  const [currentSeed, setCurrentSeed] = useState(initialSeed);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!seed) {
+    if (!currentSeed) {
       setLocation('/lobby');
       return;
     }
 
-    const initialState = initGameWithSeed(1, seed);
+    const initialState = initGameWithSeed(1, currentSeed);
+    initialState.totalTime = roundTimeLimit;
+    initialState.timeRemaining = roundTimeLimit;
     setGameState(initialState);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -167,17 +159,17 @@ export default function MultiplayerGamePage() {
         socket.close();
       }
     };
-  }, [seed, roomCode, playerId, setLocation]);
+  }, [currentSeed, roomCode, playerId, setLocation, roundTimeLimit]);
 
   useEffect(() => {
-    if (gameState?.phase === 'playing') {
+    if (gameState?.phase === 'playing' && !isEliminated) {
       timerRef.current = setInterval(() => {
         setGameState(prev => {
           if (!prev) return prev;
           const newState = tickTimer(prev);
-          if (newState.phase !== 'playing') {
+          if (newState.phase !== 'playing' && newState.phase !== prev.phase) {
             clearInterval(timerRef.current!);
-            sendGameUpdate(newState);
+            sendRoundFinished(newState);
           }
           return newState;
         });
@@ -189,28 +181,99 @@ export default function MultiplayerGamePage() {
         clearInterval(timerRef.current);
       }
     };
-  }, [gameState?.phase]);
+  }, [gameState?.phase, isEliminated]);
 
   const handleWSMessage = (message: { type: string; payload?: any }) => {
     switch (message.type) {
       case 'opponent_update':
-        setOpponents(message.payload.opponents);
+        setPlayers(prev => {
+          const updated = [...message.payload.opponents];
+          const currentPlayer = prev.find(p => p.id === playerId);
+          if (currentPlayer) {
+            return [currentPlayer, ...updated];
+          }
+          return updated;
+        });
         break;
+        
+      case 'room_update':
+        if (message.payload.room?.players) {
+          setPlayers(message.payload.room.players);
+          const readyIds = message.payload.room.players
+            .filter((p: PlayerState) => p.isReady)
+            .map((p: PlayerState) => p.id);
+          setReadyPlayers(readyIds);
+        }
+        break;
+        
       case 'player_finished':
-        if (!winner) {
-          setWinner(message.payload.playerName);
+        toast({
+          title: `${message.payload.playerName} hat die Runde beendet!`,
+        });
+        break;
+        
+      case 'player_eliminated':
+        if (message.payload.playerId === playerId) {
+          setIsEliminated(true);
+          setIsSpectating(true);
           toast({
-            title: message.payload.playerId === playerId ? "Du hast gewonnen!" : `${message.payload.playerName} hat gewonnen!`,
-            description: message.payload.playerId === playerId 
-              ? "Herzlichen Gluckwunsch!" 
-              : "Versuche es noch schneller!",
+            title: "Du wurdest eliminiert!",
+            description: "Du kannst jetzt zuschauen.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: `${message.payload.playerName} wurde eliminiert!`,
+            variant: "destructive"
           });
         }
         break;
+        
+      case 'round_end':
+        setShowRoundEnd(true);
+        setRoundEndData({
+          round: message.payload.round,
+          standings: message.payload.standings,
+          nextRound: message.payload.nextRound,
+          nextRoundTime: message.payload.nextRoundTime,
+          eliminatedId: message.payload.eliminatedId,
+          eliminatedName: message.payload.eliminatedName
+        });
+        setIsReady(false);
+        break;
+        
+      case 'round_started':
+        setShowRoundEnd(false);
+        setRoundEndData(null);
+        setCurrentRound(message.payload.currentRound);
+        setTotalRounds(message.payload.totalRounds);
+        setRoundTimeLimit(message.payload.roundTimeLimit);
+        setCurrentSeed(message.payload.seed);
+        setIsReady(false);
+        setReadyPlayers([]);
+        
+        if (message.payload.isEliminated) {
+          setIsEliminated(true);
+          setIsSpectating(true);
+        } else {
+          const newState = initGameWithSeed(1, message.payload.seed);
+          newState.totalTime = message.payload.roundTimeLimit;
+          newState.timeRemaining = message.payload.roundTimeLimit;
+          setGameState(newState);
+        }
+        break;
+        
+      case 'spectator_update':
+        setSpectatingPlayerId(message.payload.spectatingPlayerId);
+        setSpectatingPlayerName(message.payload.playerName);
+        break;
+        
       case 'game_over':
         setGameOver(true);
+        setShowRoundEnd(false);
         setFinalRanking(message.payload.ranking);
         break;
+        
       case 'error':
         toast({
           title: "Fehler",
@@ -222,7 +285,7 @@ export default function MultiplayerGamePage() {
   };
 
   const sendGameUpdate = useCallback((state: GameState) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
       wsRef.current.send(JSON.stringify({
         type: 'game_update',
         payload: {
@@ -233,19 +296,56 @@ export default function MultiplayerGamePage() {
           finished: state.phase === 'won'
         }
       }));
+      
+      setPlayers(prev => {
+        const updated = prev.map(p => 
+          p.id === playerId 
+            ? { ...p, score: state.score, cardsRemaining: state.cardsRemaining }
+            : p
+        );
+        return updated;
+      });
     }
-  }, [playerId, roomCode]);
+  }, [playerId, roomCode, isEliminated]);
+
+  const sendRoundFinished = useCallback((state: GameState) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
+      wsRef.current.send(JSON.stringify({
+        type: 'round_finished',
+        payload: {
+          playerId,
+          roomCode,
+          score: state.score
+        }
+      }));
+    }
+  }, [playerId, roomCode, isEliminated]);
+
+  const handleReadyForNextRound = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
+      wsRef.current.send(JSON.stringify({
+        type: 'ready_for_next_round',
+        payload: { playerId, roomCode }
+      }));
+      setIsReady(true);
+    }
+  }, [playerId, roomCode, isEliminated]);
+
+  const handleSpectatePlayer = useCallback((targetPlayerId: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isEliminated) {
+      wsRef.current.send(JSON.stringify({
+        type: 'spectate_player',
+        payload: { targetPlayerId }
+      }));
+    }
+  }, [isEliminated]);
 
   const handleCardClick = useCallback((cardId: string) => {
-    if (!gameState || gameState.phase !== 'playing') return;
+    if (!gameState || gameState.phase !== 'playing' || isEliminated) return;
 
-    // Check if this card is playable (not locked/dimmed)
     const cardIsPlayable = isCardPlayable(gameState, cardId);
-    
-    // If card is not playable (locked/dimmed), ignore click - no penalty
     if (!cardIsPlayable) return;
 
-    // Auto-placement: Find all valid slots and pick randomly if multiple fit
     type SlotOption = 'main' | 'slot1' | 'slot2';
     const validSlots: SlotOption[] = [];
     
@@ -260,7 +360,6 @@ export default function MultiplayerGamePage() {
     }
     
     if (validSlots.length > 0) {
-      // Randomly select a slot if multiple options exist
       const selectedSlot = validSlots[Math.floor(Math.random() * validSlots.length)];
       
       setGameState(prev => {
@@ -274,13 +373,17 @@ export default function MultiplayerGamePage() {
           newState = playCardOnBonusSlot(prev, cardId, 2);
         }
         sendGameUpdate(newState);
+        
+        if (newState.phase === 'won') {
+          sendRoundFinished(newState);
+        }
+        
         return newState;
       });
       setSelectedCardId(null);
       return;
     }
     
-    // Card doesn't fit ANY available slot - apply penalty!
     setGameState(prev => {
       if (!prev) return prev;
       const newState = applyInvalidMovePenalty(prev);
@@ -293,10 +396,10 @@ export default function MultiplayerGamePage() {
       setShakeCardId(null);
       setShowPenalty(false);
     }, 800);
-  }, [gameState, sendGameUpdate]);
+  }, [gameState, sendGameUpdate, sendRoundFinished, isEliminated]);
 
   const handleDraw = useCallback(() => {
-    if (!gameState || gameState.phase !== 'playing') return;
+    if (!gameState || gameState.phase !== 'playing' || isEliminated) return;
     
     if (gameState.drawPile.length === 0) {
       toast({
@@ -313,10 +416,10 @@ export default function MultiplayerGamePage() {
       sendGameUpdate(newState);
       return newState;
     });
-  }, [gameState, toast, sendGameUpdate]);
+  }, [gameState, toast, sendGameUpdate, isEliminated]);
 
   const handlePlayOnBonusSlot = useCallback((slotNumber: 1 | 2) => {
-    if (!gameState || gameState.phase !== 'playing' || !selectedCardId) return;
+    if (!gameState || gameState.phase !== 'playing' || !selectedCardId || isEliminated) return;
 
     if (canPlayOnBonusSlot(gameState, selectedCardId, slotNumber)) {
       setGameState(prev => {
@@ -330,7 +433,7 @@ export default function MultiplayerGamePage() {
       setShakeCardId(selectedCardId);
       setTimeout(() => setShakeCardId(null), 300);
     }
-  }, [gameState, selectedCardId, sendGameUpdate]);
+  }, [gameState, selectedCardId, sendGameUpdate, isEliminated]);
 
   const handleGoHome = () => {
     if (wsRef.current) {
@@ -352,6 +455,7 @@ export default function MultiplayerGamePage() {
 
   const discardTop = getDiscardTop(gameState);
   const rank = getRank(gameState.score);
+  const activePlayers = players.filter(p => !p.isEliminated);
 
   return (
     <div 
@@ -360,24 +464,51 @@ export default function MultiplayerGamePage() {
     >
       <MagicalParticles />
 
+      {isSpectating && (
+        <SpectatorBar
+          activePlayers={activePlayers}
+          spectatingPlayerId={spectatingPlayerId}
+          spectatingPlayerName={spectatingPlayerName}
+          onSwitchPlayer={handleSpectatePlayer}
+        />
+      )}
+
       <GameHUD
         score={gameState.score}
-        level={gameState.level}
+        level={currentRound}
         combo={gameState.combo}
         timeRemaining={gameState.timeRemaining}
-        totalTime={gameState.totalTime}
+        totalTime={roundTimeLimit}
         rank={rank}
         onPause={() => {}}
         onHome={handleGoHome}
         isPaused={false}
       />
 
-      <div className="absolute top-16 left-2 z-30 flex items-center gap-1 px-2 py-1 bg-cyan-500/20 rounded-full border border-cyan-500/30">
-        <Users className="w-3 h-3 text-cyan-400" />
-        <span className="text-xs text-cyan-400">{roomCode}</span>
+      <div className="absolute top-16 left-2 z-30 flex items-center gap-2">
+        <div className="flex items-center gap-1 px-2 py-1 bg-cyan-500/20 rounded-full border border-cyan-500/30">
+          <Users className="w-3 h-3 text-cyan-400" />
+          <span className="text-xs text-cyan-400">{roomCode}</span>
+        </div>
+        <div 
+          className="px-2 py-1 rounded-full border"
+          style={{ 
+            background: 'rgba(212, 175, 55, 0.1)',
+            borderColor: 'rgba(212, 175, 55, 0.3)'
+          }}
+        >
+          <span className="text-xs" style={{ color: '#D4AF37' }}>
+            Runde {currentRound}/{totalRounds}
+          </span>
+        </div>
       </div>
 
-      <OpponentPanel opponents={opponents} />
+      <LiveScoreboard
+        players={players}
+        currentPlayerId={playerId}
+        currentRound={currentRound}
+        totalRounds={totalRounds}
+      />
 
       <AnimatePresence>
         {showPenalty && (
@@ -401,7 +532,7 @@ export default function MultiplayerGamePage() {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden">
+      <div className={`flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden ${isSpectating ? 'mt-12' : ''}`}>
         <TriPeaksTowers
           pyramid={gameState.pyramid}
           onCardClick={handleCardClick}
@@ -417,11 +548,28 @@ export default function MultiplayerGamePage() {
         bonusSlot2={gameState.bonusSlot2}
         selectedCardId={selectedCardId}
         timeRemaining={gameState.timeRemaining}
-        maxTime={60}
+        maxTime={roundTimeLimit}
         onDraw={handleDraw}
         onPlayOnSlot={handlePlayOnBonusSlot}
-        disabled={gameState.phase !== 'playing'}
+        disabled={gameState.phase !== 'playing' || isEliminated}
       />
+
+      <AnimatePresence>
+        {showRoundEnd && roundEndData && (
+          <RoundTransitionOverlay
+            round={roundEndData.round}
+            standings={roundEndData.standings}
+            currentPlayerId={playerId}
+            readyPlayers={readyPlayers}
+            eliminatedPlayerId={roundEndData.eliminatedId}
+            eliminatedPlayerName={roundEndData.eliminatedName}
+            nextRound={roundEndData.nextRound}
+            nextRoundTime={roundEndData.nextRoundTime}
+            onReady={handleReadyForNextRound}
+            isReady={isReady}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {gameOver && (
@@ -435,7 +583,7 @@ export default function MultiplayerGamePage() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               className="text-center p-8 rounded-xl max-w-md w-full mx-4"
-              style={{ background: 'linear-gradient(to bottom, #001428, #000814)' }}
+              style={{ background: 'linear-gradient(to bottom, #001428, #000814)', border: '1px solid rgba(212, 175, 55, 0.3)' }}
             >
               <Trophy className="w-16 h-16 mx-auto mb-4 text-amber-400" />
               <h2 
@@ -445,34 +593,48 @@ export default function MultiplayerGamePage() {
                 Spiel beendet!
               </h2>
 
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
                 {finalRanking.map((player, idx) => (
                   <div
                     key={player.id}
                     className={`flex items-center justify-between p-3 rounded-lg ${
-                      idx === 0 
-                        ? 'bg-amber-500/20 border border-amber-500/50' 
-                        : 'bg-gray-800/50'
+                      player.isEliminated
+                        ? 'bg-red-950/30 opacity-60'
+                        : idx === 0 
+                          ? 'bg-amber-500/20 border border-amber-500/50' 
+                          : 'bg-gray-800/50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <span 
                         className={`text-lg font-bold ${
-                          idx === 0 ? 'text-amber-400' : 'text-gray-400'
+                          player.isEliminated ? 'text-red-500' : idx === 0 ? 'text-amber-400' : 'text-gray-400'
                         }`}
                       >
                         #{idx + 1}
                       </span>
-                      <span className={`${player.id === playerId ? 'text-cyan-400' : 'text-white'}`}>
-                        {player.name}
-                        {player.id === playerId && ' (Du)'}
-                      </span>
+                      <div>
+                        <span className={`${
+                          player.isEliminated 
+                            ? 'text-red-400 line-through' 
+                            : player.id === playerId 
+                              ? 'text-cyan-400' 
+                              : 'text-white'
+                        }`}>
+                          {player.name}
+                          {player.id === playerId && ' (Du)'}
+                        </span>
+                        {player.isEliminated && player.eliminatedInRound && (
+                          <div className="text-xs text-red-500">
+                            Eliminiert in Runde {player.eliminatedInRound}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <span 
-                      className="font-bold"
-                      style={{ color: idx === 0 ? '#D4AF37' : '#888' }}
+                      className={`font-bold ${player.isEliminated ? 'text-red-400' : 'text-amber-300'}`}
                     >
-                      {player.score.toLocaleString()}
+                      {player.totalScore.toLocaleString()}
                     </span>
                   </div>
                 ))}
