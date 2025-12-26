@@ -436,12 +436,18 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
     return gameState;
   }
   
+  // DEBUG: Log before state changes
+  console.log(`[playCardOnBonusSlot] Playing on slot ${slotNumber}`);
+  console.log(`[playCardOnBonusSlot] BEFORE - Slot1: ${gameState.bonusSlot1.card?.value}, Slot2: ${gameState.bonusSlot2.card?.value}`);
+  
   const newState = { ...gameState };
   newState.pyramid = gameState.pyramid.map(node => ({ ...node }));
   
   // IMPORTANT: Deep copy both bonus slots to prevent mutation of unrelated slot
   newState.bonusSlot1 = { ...gameState.bonusSlot1, card: gameState.bonusSlot1.card ? { ...gameState.bonusSlot1.card } : null };
   newState.bonusSlot2 = { ...gameState.bonusSlot2, card: gameState.bonusSlot2.card ? { ...gameState.bonusSlot2.card } : null };
+  
+  console.log(`[playCardOnBonusSlot] After deep copy - Slot1: ${newState.bonusSlot1.card?.value}, Slot2: ${newState.bonusSlot2.card?.value}`);
   
   let playedCard: Card | null = null;
   
@@ -501,16 +507,21 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   }
   
   // Check and activate bonus slots based on combo - generate a card automatically
+  // NOTE: This should NOT change an already-active slot
   if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
+    console.log(`[playCardOnBonusSlot] Activating slot 1 because combo=${newState.combo} and slot1 is not active`);
     const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
     newState.bonusSlot1 = { card: bonusCard, isActive: true };
     newState.bonusSlot1ActivationCount++;
   }
   if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
+    console.log(`[playCardOnBonusSlot] Activating slot 2 because combo=${newState.combo} and slot2 is not active`);
     const bonusCard = generateBonusCard(newState.gameSeed, 2, newState.bonusSlot2ActivationCount);
     newState.bonusSlot2 = { card: bonusCard, isActive: true };
     newState.bonusSlot2ActivationCount++;
   }
+  
+  console.log(`[playCardOnBonusSlot] FINAL - Slot1: ${newState.bonusSlot1.card?.value} (active=${newState.bonusSlot1.isActive}), Slot2: ${newState.bonusSlot2.card?.value} (active=${newState.bonusSlot2.isActive})`);
   
   return newState;
 }
