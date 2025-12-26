@@ -29,26 +29,26 @@ export function GameHUD({
   isPaused
 }: GameHUDProps) {
   return (
-    <div className="relative z-20 p-3 bg-[#000814]/95 border-b border-amber-500/30">
-      <div className="flex items-center justify-between gap-4 mb-3">
-        <div className="flex items-center gap-2">
+    <div className="relative z-20 p-2 sm:p-3 bg-[#000814]/95 border-b border-amber-500/30">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-3">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={onHome}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white h-8 w-8 sm:h-9 sm:w-9"
             data-testid="button-hud-home"
           >
-            <Home className="w-5 h-5" />
+            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={onPause}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white h-8 w-8 sm:h-9 sm:w-9"
             data-testid="button-hud-pause"
           >
-            {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+            {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
           </Button>
         </div>
 
@@ -56,11 +56,11 @@ export function GameHUD({
           key={score}
           initial={{ scale: 1.2 }}
           animate={{ scale: 1 }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-1 sm:gap-2"
         >
-          <Trophy className="w-5 h-5 text-amber-400" />
+          <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
           <span 
-            className="text-2xl font-bold"
+            className="text-lg sm:text-2xl font-bold"
             style={{ 
               color: '#D4AF37',
               textShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
@@ -71,14 +71,14 @@ export function GameHUD({
           </span>
         </motion.div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Badge 
             variant="outline" 
-            className="border-cyan-500/50 text-cyan-400"
+            className="border-cyan-500/50 text-cyan-400 text-xs sm:text-sm"
             data-testid="badge-level"
           >
             <Star className="w-3 h-3 mr-1" />
-            Lvl {level}
+            {level}
           </Badge>
           <Badge 
             variant="outline" 

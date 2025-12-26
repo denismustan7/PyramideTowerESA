@@ -62,12 +62,12 @@ export function DrawArea({
   const hasCards = drawPile.length > 0;
 
   return (
-    <div className="relative z-20 p-4 pb-6 bg-[#000814]/95 border-t border-amber-500/30">
-      <div className="flex items-center justify-center gap-3 max-w-xl mx-auto">
+    <div className="relative z-20 p-2 sm:p-4 pb-4 sm:pb-6 bg-[#000814]/95 border-t border-amber-500/30">
+      <div className="flex items-center justify-center gap-2 sm:gap-3 max-w-xl mx-auto">
         <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <motion.button
-          className={`relative w-11 h-16 rounded-md flex items-center justify-center ${
+          className={`relative w-9 h-13 sm:w-11 sm:h-16 rounded-md flex items-center justify-center ${
             hasCards && !disabled
               ? 'cursor-pointer'
               : 'cursor-not-allowed'
@@ -135,7 +135,7 @@ export function DrawArea({
               className="w-full h-full rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
             >
-              <span className="text-gray-600 text-[10px]">Leer</span>
+              <span className="text-gray-600 text-[8px] sm:text-[10px]">Leer</span>
             </div>
           )}
         </motion.button>
@@ -151,12 +151,12 @@ export function DrawArea({
               <PlayingCard
                 card={discardTop}
                 isPlayable={false}
-                size="md"
+                size="sm"
               />
             </motion.div>
           ) : (
             <div 
-              className="w-11 h-16 rounded-md flex items-center justify-center"
+              className="w-9 h-13 sm:w-11 sm:h-16 rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
             />
           )}

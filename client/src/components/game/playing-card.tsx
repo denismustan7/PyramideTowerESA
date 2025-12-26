@@ -177,7 +177,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
   if (!isActive) {
     return (
       <div 
-        className="w-11 h-16 rounded-md"
+        className="w-9 h-13 sm:w-11 sm:h-16 rounded-md"
         style={{
           background: 'rgba(0, 0, 0, 0.4)',
           border: '2px solid rgba(100, 100, 100, 0.4)',
@@ -198,7 +198,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
           card={card}
           isPlayable={false}
           isCovered={false}
-          size="md"
+          size="sm"
         />
       </motion.div>
     );
@@ -206,7 +206,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
 
   return (
     <motion.div 
-      className="w-11 h-16 rounded-md"
+      className="w-9 h-13 sm:w-11 sm:h-16 rounded-md"
       style={{
         background: 'rgba(212, 175, 55, 0.1)',
         border: '2px dashed #D4AF37',
