@@ -285,7 +285,7 @@ export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCard
   };
 
   return (
-    <div className="flex items-end justify-center scale-[0.58] sm:scale-[0.85] origin-top" style={{ marginTop: '0px' }}>
+    <div className="flex items-end justify-center scale-[0.55] sm:scale-[0.85] origin-top" style={{ marginTop: '0px' }}>
       {Array.from({ length: NUM_TOWERS }, (_, towerIdx) => (
         <div 
           key={`tower-${towerIdx}`}
