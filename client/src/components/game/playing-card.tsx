@@ -26,21 +26,21 @@ const suitColors: Record<Suit, string> = {
 };
 
 const sizeClasses = {
-  sm: 'w-10 h-14',
-  md: 'w-14 h-20',
-  lg: 'w-[4.5rem] h-[6.5rem]',
+  sm: 'w-8 h-11',
+  md: 'w-11 h-16',
+  lg: 'w-14 h-20',
 };
 
 const valueSizes = {
-  sm: 'text-2xl',
-  md: 'text-4xl',
-  lg: 'text-5xl',
+  sm: 'text-lg',
+  md: 'text-2xl',
+  lg: 'text-4xl',
 };
 
 const suitSizes = {
-  sm: 'text-base',
-  md: 'text-xl',
-  lg: 'text-2xl',
+  sm: 'text-xs',
+  md: 'text-base',
+  lg: 'text-xl',
 };
 
 export function PlayingCard({ 
@@ -57,37 +57,45 @@ export function PlayingCard({
       <motion.div
         className={cn(
           sizeClasses[size],
-          "rounded-lg relative overflow-hidden"
+          "rounded-md relative overflow-hidden"
         )}
         style={{
-          background: 'linear-gradient(135deg, #1a3a5c 0%, #0d1f33 50%, #071426 100%)',
-          border: '3px solid',
-          borderImage: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 50%, #D4AF37 100%) 1',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212, 175, 55, 0.3)'
+          background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 25%, #1e3a5f 50%, #2c5282 75%, #1e3a5f 100%)',
+          border: '2px solid #D4AF37',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.3)'
         }}
         initial={{ rotateY: 180 }}
         animate={{ rotateY: 0 }}
         transition={{ duration: 0.3 }}
       >
+        {/* Diamond pattern overlay */}
         <div 
-          className="absolute inset-1 rounded" 
-          style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(212, 175, 55, 0.15) 4px, rgba(212, 175, 55, 0.15) 5px),
+              repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(212, 175, 55, 0.15) 4px, rgba(212, 175, 55, 0.15) 5px)
+            `
+          }}
         />
+        {/* Inner border frame */}
         <div 
-          className="absolute inset-2 rounded-sm" 
-          style={{ border: '1px solid rgba(212, 175, 55, 0.2)' }}
+          className="absolute inset-1 rounded-sm" 
+          style={{ border: '1px solid rgba(212, 175, 55, 0.5)' }}
         />
+        {/* Center star symbol */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="w-8 h-8" style={{ color: '#D4AF37' }}>
+          <svg viewBox="0 0 24 24" className={cn(size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6')} style={{ color: '#D4AF37' }}>
             <path 
               fill="currentColor" 
               d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
             />
           </svg>
         </div>
+        {/* Bottom glow */}
         <div 
           className="absolute inset-0" 
-          style={{ background: 'linear-gradient(to top, rgba(212, 175, 55, 0.1), transparent)' }}
+          style={{ background: 'linear-gradient(to top, rgba(212, 175, 55, 0.15), transparent 50%)' }}
         />
       </motion.div>
     );
@@ -172,73 +180,85 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
     return (
       <div className="flex flex-col items-center gap-1">
         <div 
-          className="w-14 h-20 rounded-lg flex items-center justify-center relative"
+          className="w-11 h-16 rounded-md flex items-center justify-center relative"
           style={{
             background: 'rgba(0, 0, 0, 0.4)',
             border: '2px solid rgba(100, 100, 100, 0.4)',
           }}
         >
-          <span className="text-gray-500 text-3xl font-bold">X</span>
+          <span className="text-gray-500 text-xl font-bold">X</span>
         </div>
-        <span className="text-gray-500 text-[10px] font-bold tracking-wide">{comboLabel} COMBO</span>
+        <span className="text-gray-500 text-[9px] font-bold tracking-wide">{comboLabel} COMBO</span>
       </div>
     );
   }
 
-  if (!card) {
+  // Slot is active and has a card - make it clickable to play on
+  if (card) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <motion.button 
-          className="w-14 h-20 rounded-lg flex items-center justify-center"
-          style={{
-            background: hasSelectedCard ? 'rgba(212, 175, 55, 0.2)' : 'rgba(212, 175, 55, 0.1)',
-            border: '2px dashed #D4AF37',
-            boxShadow: hasSelectedCard 
-              ? '0 0 25px rgba(212, 175, 55, 0.6)' 
-              : '0 0 15px rgba(212, 175, 55, 0.3)',
-            cursor: hasSelectedCard ? 'pointer' : 'default'
-          }}
-          onClick={hasSelectedCard ? onClick : undefined}
-          initial={{ opacity: 0, scale: 0.8 }}
+        <motion.button
+          initial={{ scale: 0 }}
           animate={{ 
-            opacity: 1, 
             scale: 1,
             boxShadow: hasSelectedCard 
-              ? ['0 0 25px rgba(212, 175, 55, 0.6)', '0 0 35px rgba(212, 175, 55, 0.8)', '0 0 25px rgba(212, 175, 55, 0.6)']
-              : ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
+              ? ['0 0 15px rgba(212, 175, 55, 0.4)', '0 0 25px rgba(212, 175, 55, 0.7)', '0 0 15px rgba(212, 175, 55, 0.4)']
+              : 'none'
           }}
-          whileHover={hasSelectedCard ? { scale: 1.05 } : {}}
-          whileTap={hasSelectedCard ? { scale: 0.95 } : {}}
           transition={{ 
-            duration: 0.3,
+            scale: { duration: 0.3 },
             boxShadow: { duration: 1.5, repeat: Infinity }
           }}
+          className={cn(
+            "relative rounded-md",
+            hasSelectedCard && "cursor-pointer"
+          )}
+          style={{
+            outline: hasSelectedCard ? '3px solid rgba(212, 175, 55, 0.8)' : 'none',
+            outlineOffset: '2px'
+          }}
+          onClick={hasSelectedCard ? onClick : undefined}
+          whileHover={hasSelectedCard ? { scale: 1.08 } : {}}
+          whileTap={hasSelectedCard ? { scale: 0.95 } : {}}
           data-testid={`bonus-slot-${slotNumber}`}
         >
-          <span className="text-amber-400 text-xs font-bold">
-            {hasSelectedCard ? 'HIER' : 'AKTIV'}
-          </span>
+          <PlayingCard
+            card={card}
+            isPlayable={false}
+            isCovered={false}
+            size="md"
+          />
         </motion.button>
-        <span className="text-amber-400 text-[10px] font-bold tracking-wide">{comboLabel} COMBO</span>
+        <span className="text-amber-400 text-[9px] font-bold tracking-wide">{comboLabel} COMBO</span>
       </div>
     );
   }
 
+  // Slot is active but no card yet (shouldn't happen with auto-generation, but fallback)
   return (
     <div className="flex flex-col items-center gap-1">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="relative"
+      <motion.div 
+        className="w-11 h-16 rounded-md flex items-center justify-center"
+        style={{
+          background: 'rgba(212, 175, 55, 0.1)',
+          border: '2px dashed #D4AF37',
+          boxShadow: '0 0 15px rgba(212, 175, 55, 0.3)',
+        }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ 
+          opacity: 1, 
+          scale: 1,
+          boxShadow: ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
+        }}
+        transition={{ 
+          duration: 0.3,
+          boxShadow: { duration: 1.5, repeat: Infinity }
+        }}
+        data-testid={`bonus-slot-${slotNumber}`}
       >
-        <PlayingCard
-          card={card}
-          isPlayable={false}
-          isCovered={false}
-          size="md"
-        />
+        <span className="text-amber-400 text-[10px] font-bold">AKTIV</span>
       </motion.div>
-      <span className="text-amber-400 text-[10px] font-bold tracking-wide">{comboLabel} COMBO</span>
+      <span className="text-amber-400 text-[9px] font-bold tracking-wide">{comboLabel} COMBO</span>
     </div>
   );
 }

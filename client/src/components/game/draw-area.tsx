@@ -26,7 +26,7 @@ function TimerBar({ timeRemaining, maxTime }: { timeRemaining: number; maxTime: 
 
   return (
     <div 
-      className="w-3 h-20 rounded-full overflow-hidden relative"
+      className="w-2.5 h-16 rounded-full overflow-hidden relative"
       style={{ 
         background: 'rgba(0, 0, 0, 0.5)',
         border: '1px solid rgba(100, 100, 100, 0.3)'
@@ -67,7 +67,7 @@ export function DrawArea({
         <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <motion.button
-          className={`relative w-16 h-22 rounded-lg flex items-center justify-center ${
+          className={`relative w-11 h-16 rounded-md flex items-center justify-center ${
             hasCards && !disabled
               ? 'cursor-pointer'
               : 'cursor-not-allowed'
@@ -79,35 +79,56 @@ export function DrawArea({
         >
           {hasCards ? (
             <>
+              {/* Stacked card effect behind */}
               <div 
-                className="absolute inset-0 rounded-lg transform translate-x-0.5 translate-y-0.5 shadow-lg"
+                className="absolute inset-0 rounded-md transform translate-x-0.5 translate-y-0.5"
                 style={{
-                  background: 'linear-gradient(135deg, #0B1D3C 0%, #051026 100%)',
+                  background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #1e3a5f 100%)',
                   border: '2px solid rgba(212, 175, 55, 0.4)',
                 }}
               />
+              {/* Main card back */}
               <div 
-                className="absolute inset-0 rounded-lg shadow-lg"
+                className="absolute inset-0 rounded-md overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #0B1D3C 0%, #051026 100%)',
-                  border: '2px solid rgba(212, 175, 55, 0.5)',
+                  background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 25%, #1e3a5f 50%, #2c5282 75%, #1e3a5f 100%)',
+                  border: '2px solid #D4AF37',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                 }}
               >
+                {/* Diamond pattern */}
                 <div 
-                  className="absolute inset-1 rounded-md"
-                  style={{ border: '1px solid rgba(212, 175, 55, 0.3)' }}
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: `
+                      repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(212, 175, 55, 0.12) 3px, rgba(212, 175, 55, 0.12) 4px),
+                      repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(212, 175, 55, 0.12) 3px, rgba(212, 175, 55, 0.12) 4px)
+                    `
+                  }}
                 />
+                {/* Inner border */}
+                <div 
+                  className="absolute inset-1 rounded-sm"
+                  style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}
+                />
+                {/* Center star */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6" style={{ color: 'rgba(212, 175, 55, 0.7)' }}>
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" style={{ color: '#D4AF37' }}>
                     <path 
                       fill="currentColor" 
                       d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
                     />
                   </svg>
                 </div>
+                {/* Bottom glow */}
+                <div 
+                  className="absolute inset-0" 
+                  style={{ background: 'linear-gradient(to top, rgba(212, 175, 55, 0.12), transparent 50%)' }}
+                />
               </div>
+              {/* Card count badge */}
               <div 
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-black text-xs font-bold flex items-center justify-center shadow-lg"
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-black text-[10px] font-bold flex items-center justify-center shadow-lg"
                 style={{ 
                   background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)',
                   boxShadow: '0 0 8px rgba(212, 175, 55, 0.5)' 
@@ -118,10 +139,10 @@ export function DrawArea({
             </>
           ) : (
             <div 
-              className="w-full h-full rounded-lg flex items-center justify-center"
+              className="w-full h-full rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
             >
-              <span className="text-gray-600 text-xs">Leer</span>
+              <span className="text-gray-600 text-[10px]">Leer</span>
             </div>
           )}
         </motion.button>
@@ -153,10 +174,10 @@ export function DrawArea({
             </motion.div>
           ) : (
             <div 
-              className="w-14 h-20 rounded-lg flex items-center justify-center"
+              className="w-11 h-16 rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
             >
-              <span className="text-gray-600 text-xs">Ablage</span>
+              <span className="text-gray-600 text-[10px]">Ablage</span>
             </div>
           )}
         </div>
