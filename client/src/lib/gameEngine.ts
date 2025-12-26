@@ -5,6 +5,8 @@ import {
   BASE_POINTS, 
   TOWER_BONUS, 
   PERFECT_BONUS, 
+  DECK_BONUS_PER_CARD,
+  INVALID_MOVE_PENALTY,
   TIME_BONUS_MULTIPLIER,
   BASE_TIME,
   TIME_DECREASE_PER_LEVEL,
@@ -299,9 +301,9 @@ export function playCard(gameState: GameState, cardId: string): GameState {
   // Check for win condition
   if (newState.cardsRemaining === 0) {
     newState.phase = 'won';
-    // Perfect bonus if draw pile is not empty
+    // Deck bonus: 500 points per remaining draw pile card
     if (newState.drawPile.length > 0) {
-      newState.score += PERFECT_BONUS;
+      newState.score += newState.drawPile.length * DECK_BONUS_PER_CARD;
     }
     // Time bonus
     newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
@@ -447,8 +449,9 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   // Check for win condition
   if (newState.cardsRemaining === 0) {
     newState.phase = 'won';
+    // Deck bonus: 500 points per remaining draw pile card
     if (newState.drawPile.length > 0) {
-      newState.score += PERFECT_BONUS;
+      newState.score += newState.drawPile.length * DECK_BONUS_PER_CARD;
     }
     newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
   }
@@ -465,6 +468,37 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
     newState.bonusSlot2ActivationCount++;
   }
   
+  return newState;
+}
+
+// Check if a playable card can fit on ANY available slot (main discard, bonus slot 1, bonus slot 2)
+export function canPlayOnAnySlot(gameState: GameState, cardId: string): boolean {
+  // Check main discard pile
+  if (canPlay(gameState, cardId)) return true;
+  
+  // Check bonus slot 1
+  if (canPlayOnBonusSlot(gameState, cardId, 1)) return true;
+  
+  // Check bonus slot 2
+  if (canPlayOnBonusSlot(gameState, cardId, 2)) return true;
+  
+  return false;
+}
+
+// Check if a card is playable (active/unlocked) in the pyramid
+export function isCardPlayable(gameState: GameState, cardId: string): boolean {
+  for (const node of gameState.pyramid) {
+    if (node.card && node.card.id === cardId) {
+      return node.card.isPlayable;
+    }
+  }
+  return false;
+}
+
+// Apply penalty for invalid move - only when clicking playable card that doesn't fit any slot
+export function applyInvalidMovePenalty(gameState: GameState): GameState {
+  const newState = { ...gameState };
+  newState.score = Math.max(0, newState.score - INVALID_MOVE_PENALTY);
   return newState;
 }
 

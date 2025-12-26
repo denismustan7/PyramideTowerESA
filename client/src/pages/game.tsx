@@ -14,10 +14,14 @@ import {
   canPlay, 
   canPlayOnBonusSlot,
   playCardOnBonusSlot,
+  canPlayOnAnySlot,
+  isCardPlayable,
+  applyInvalidMovePenalty,
   getDiscardTop,
   calculateScoreBreakdown,
   getRank
 } from "@/lib/gameEngine";
+import { INVALID_MOVE_PENALTY } from "@shared/schema";
 import type { GameState } from "@shared/schema";
 import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
 import { GameHUD } from "@/components/game/game-hud";
@@ -71,6 +75,7 @@ export default function GamePage() {
   const [showGameOver, setShowGameOver] = useState(false);
   const [shakeCardId, setShakeCardId] = useState<string | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [showPenalty, setShowPenalty] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const submitScore = useMutation({
@@ -108,22 +113,37 @@ export default function GamePage() {
   const handleCardClick = useCallback((cardId: string) => {
     if (gameState.phase !== 'playing' || isPaused) return;
 
+    // Check if this card is playable (not locked/dimmed)
+    const cardIsPlayable = isCardPlayable(gameState, cardId);
+    
+    // If card is not playable (locked/dimmed), ignore click - no penalty
+    if (!cardIsPlayable) return;
+
+    // Card is playable - first check if it can be played on main discard
     if (canPlay(gameState, cardId)) {
       setGameState(prev => playCard(prev, cardId));
       setSelectedCardId(null);
-    } else if ((gameState.bonusSlot1.isActive && gameState.bonusSlot1.card) || 
-               (gameState.bonusSlot2.isActive && gameState.bonusSlot2.card)) {
-      // Check if this card can be played on any active bonus slot
-      if (canPlayOnBonusSlot(gameState, cardId, 1) || canPlayOnBonusSlot(gameState, cardId, 2)) {
-        setSelectedCardId(cardId);
-      } else {
-        setShakeCardId(cardId);
-        setTimeout(() => setShakeCardId(null), 300);
-      }
-    } else {
-      setShakeCardId(cardId);
-      setTimeout(() => setShakeCardId(null), 300);
+      return;
     }
+    
+    // Check if card can be played on any bonus slot
+    const canPlaySlot1 = canPlayOnBonusSlot(gameState, cardId, 1);
+    const canPlaySlot2 = canPlayOnBonusSlot(gameState, cardId, 2);
+    
+    if (canPlaySlot1 || canPlaySlot2) {
+      // Card fits at least one bonus slot - select it for placement
+      setSelectedCardId(cardId);
+      return;
+    }
+    
+    // Card doesn't fit ANY available slot - apply penalty!
+    setGameState(prev => applyInvalidMovePenalty(prev));
+    setShakeCardId(cardId);
+    setShowPenalty(true);
+    setTimeout(() => {
+      setShakeCardId(null);
+      setShowPenalty(false);
+    }, 800);
   }, [gameState, isPaused]);
 
   const handlePlayOnBonusSlot = useCallback((slotNumber: 1 | 2) => {
@@ -213,6 +233,28 @@ export default function GamePage() {
         onHome={handleGoHome}
         isPaused={isPaused}
       />
+      
+      <AnimatePresence>
+        {showPenalty && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 1.5 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none"
+            data-testid="penalty-display"
+          >
+            <span 
+              className="text-3xl font-bold"
+              style={{ 
+                color: '#ff4444',
+                textShadow: '0 0 20px rgba(255, 68, 68, 0.8), 0 0 40px rgba(255, 68, 68, 0.4)'
+              }}
+            >
+              -{INVALID_MOVE_PENALTY}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden">
         <TriPeaksTowers
