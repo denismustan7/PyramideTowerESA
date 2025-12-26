@@ -3,24 +3,32 @@ import type { Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { z } from "zod";
+import { getMultiplayerConfig, getRoundTime, BASE_TIME } from "@shared/schema";
 
 interface Room {
   code: string;
   players: Map<string, RoomPlayer>;
   gameSeed: number | null;
-  status: 'waiting' | 'playing' | 'finished';
+  status: 'waiting' | 'playing' | 'round_end' | 'finished';
   maxPlayers: number;
   createdAt: number;
+  currentRound: number;
+  totalRounds: number;
+  roundTimeLimit: number;
+  playerCount: number; // Number of players when game started
 }
 
 interface RoomPlayer {
   id: string;
   name: string;
-  score: number;
+  score: number; // Current round score
+  totalScore: number; // Cumulative score
   cardsRemaining: number;
   isReady: boolean;
   isHost: boolean;
   finished: boolean;
+  isEliminated: boolean;
+  eliminatedInRound: number | null;
   ws: WebSocket;
 }
 
@@ -55,10 +63,13 @@ function getRoomState(room: Room) {
     id: p.id,
     name: p.name,
     score: p.score,
+    totalScore: p.totalScore,
     cardsRemaining: p.cardsRemaining,
     isReady: p.isReady,
     isHost: p.isHost,
-    finished: p.finished
+    finished: p.finished,
+    isEliminated: p.isEliminated,
+    eliminatedInRound: p.eliminatedInRound
   }));
   
   return {
@@ -67,8 +78,40 @@ function getRoomState(room: Room) {
     gameSeed: room.gameSeed,
     status: room.status,
     maxPlayers: room.maxPlayers,
-    createdAt: room.createdAt
+    createdAt: room.createdAt,
+    currentRound: room.currentRound,
+    totalRounds: room.totalRounds,
+    roundTimeLimit: room.roundTimeLimit
   };
+}
+
+function getActivePlayers(room: Room): RoomPlayer[] {
+  return Array.from(room.players.values()).filter(p => !p.isEliminated);
+}
+
+function checkAndEliminatePlayer(room: Room): RoomPlayer | null {
+  const config = getMultiplayerConfig(room.playerCount);
+  
+  // Only eliminate if we're at or past the elimination start round
+  if (room.currentRound < config.eliminationStartRound) return null;
+  
+  const activePlayers = getActivePlayers(room);
+  if (activePlayers.length <= 1) return null; // Don't eliminate if only 1 player left
+  
+  // Find the player with the lowest total score
+  const lowestPlayer = activePlayers.reduce((lowest, player) => 
+    player.totalScore < lowest.totalScore ? player : lowest
+  );
+  
+  lowestPlayer.isEliminated = true;
+  lowestPlayer.eliminatedInRound = room.currentRound;
+  
+  return lowestPlayer;
+}
+
+function checkGameOver(room: Room): boolean {
+  const activePlayers = getActivePlayers(room);
+  return activePlayers.length <= 1 || room.currentRound >= room.totalRounds;
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
@@ -139,17 +182,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           gameSeed: null,
           status: 'waiting',
           maxPlayers: 6,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          currentRound: 1,
+          totalRounds: 8,
+          roundTimeLimit: BASE_TIME,
+          playerCount: 1
         };
 
         room.players.set(playerId, {
           id: playerId,
           name: playerName,
           score: 0,
-          cardsRemaining: 28,
+          totalScore: 0,
+          cardsRemaining: 30,
           isReady: false,
           isHost: true,
           finished: false,
+          isEliminated: false,
+          eliminatedInRound: null,
           ws
         });
 
@@ -200,10 +250,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: playerId,
           name: playerName,
           score: 0,
-          cardsRemaining: 28,
+          totalScore: 0,
+          cardsRemaining: 30,
           isReady: false,
           isHost: false,
           finished: false,
+          isEliminated: false,
+          eliminatedInRound: null,
           ws
         });
 
@@ -292,13 +345,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               return;
             }
 
+            // Set up game configuration based on player count
+            room.playerCount = room.players.size;
+            const config = getMultiplayerConfig(room.playerCount);
+            room.totalRounds = config.totalRounds;
+            room.currentRound = 1;
+            room.roundTimeLimit = getRoundTime(1, room.playerCount);
             room.status = 'playing';
             room.gameSeed = Date.now();
 
             for (const [playerId, p] of room.players) {
               p.score = 0;
-              p.cardsRemaining = 28;
+              p.totalScore = 0;
+              p.cardsRemaining = 30;
               p.finished = false;
+              p.isReady = false;
+              p.isEliminated = false;
+              p.eliminatedInRound = null;
 
               if (p.ws.readyState === WebSocket.OPEN) {
                 p.ws.send(JSON.stringify({
@@ -306,10 +369,193 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                   payload: {
                     roomCode: room.code,
                     playerId,
-                    seed: room.gameSeed
+                    seed: room.gameSeed,
+                    currentRound: room.currentRound,
+                    totalRounds: room.totalRounds,
+                    roundTimeLimit: room.roundTimeLimit,
+                    playerCount: room.playerCount
                   }
                 }));
               }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'round_finished': {
+        if (currentPlayerId && currentRoomCode) {
+          const room = rooms.get(currentRoomCode);
+          if (room) {
+            const player = room.players.get(currentPlayerId);
+            if (player && !player.isEliminated) {
+              const { score } = message.payload;
+              player.score = score;
+              player.totalScore += score;
+              player.finished = true;
+              player.isReady = false;
+
+              // Check if all active players have finished the round
+              const activePlayers = getActivePlayers(room);
+              const allFinished = activePlayers.every(p => p.finished);
+
+              if (allFinished) {
+                room.status = 'round_end';
+                
+                // Check for elimination
+                const eliminatedPlayer = checkAndEliminatePlayer(room);
+                
+                if (eliminatedPlayer) {
+                  broadcastToRoom(room, {
+                    type: 'player_eliminated',
+                    payload: {
+                      playerId: eliminatedPlayer.id,
+                      playerName: eliminatedPlayer.name,
+                      round: room.currentRound,
+                      totalScore: eliminatedPlayer.totalScore
+                    }
+                  });
+                }
+
+                // Check if game is over
+                if (checkGameOver(room)) {
+                  room.status = 'finished';
+                  const ranking = Array.from(room.players.values())
+                    .sort((a, b) => b.totalScore - a.totalScore)
+                    .map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      score: p.score,
+                      totalScore: p.totalScore,
+                      isEliminated: p.isEliminated,
+                      eliminatedInRound: p.eliminatedInRound
+                    }));
+
+                  broadcastToRoom(room, {
+                    type: 'game_over',
+                    payload: { ranking }
+                  });
+                } else {
+                  // Send round end to all players
+                  const standings = Array.from(room.players.values())
+                    .sort((a, b) => b.totalScore - a.totalScore)
+                    .map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      score: p.score,
+                      totalScore: p.totalScore,
+                      isEliminated: p.isEliminated
+                    }));
+
+                  broadcastToRoom(room, {
+                    type: 'round_end',
+                    payload: {
+                      round: room.currentRound,
+                      standings,
+                      nextRound: room.currentRound + 1,
+                      nextRoundTime: getRoundTime(room.currentRound + 1, room.playerCount)
+                    }
+                  });
+                }
+              }
+
+              // Update all players about opponent states
+              for (const [pid, pl] of Array.from(room.players.entries())) {
+                const opponentsForPlayer = Array.from(room.players.values())
+                  .filter(p => p.id !== pid)
+                  .map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    score: p.score,
+                    totalScore: p.totalScore,
+                    cardsRemaining: p.cardsRemaining,
+                    finished: p.finished,
+                    isEliminated: p.isEliminated
+                  }));
+
+                if (pl.ws.readyState === WebSocket.OPEN) {
+                  pl.ws.send(JSON.stringify({
+                    type: 'opponent_update',
+                    payload: { opponents: opponentsForPlayer }
+                  }));
+                }
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'ready_for_next_round': {
+        if (currentPlayerId && currentRoomCode) {
+          const room = rooms.get(currentRoomCode);
+          if (room && room.status === 'round_end') {
+            const player = room.players.get(currentPlayerId);
+            if (player && !player.isEliminated) {
+              player.isReady = true;
+
+              // Broadcast ready status
+              broadcastToRoom(room, {
+                type: 'room_update',
+                payload: { room: getRoomState(room) }
+              });
+
+              // Check if all active players are ready
+              const activePlayers = getActivePlayers(room);
+              const allReady = activePlayers.every(p => p.isReady);
+
+              if (allReady) {
+                // Start next round
+                room.currentRound++;
+                room.roundTimeLimit = getRoundTime(room.currentRound, room.playerCount);
+                room.gameSeed = Date.now() + room.currentRound; // New seed for new round
+                room.status = 'playing';
+
+                for (const [playerId, p] of room.players) {
+                  p.score = 0;
+                  p.cardsRemaining = 30;
+                  p.finished = false;
+                  p.isReady = false;
+
+                  if (p.ws.readyState === WebSocket.OPEN) {
+                    p.ws.send(JSON.stringify({
+                      type: 'round_started',
+                      payload: {
+                        currentRound: room.currentRound,
+                        totalRounds: room.totalRounds,
+                        roundTimeLimit: room.roundTimeLimit,
+                        seed: room.gameSeed,
+                        isEliminated: p.isEliminated
+                      }
+                    }));
+                  }
+                }
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'spectate_player': {
+        if (currentPlayerId && currentRoomCode) {
+          const room = rooms.get(currentRoomCode);
+          if (room) {
+            const spectator = room.players.get(currentPlayerId);
+            const { targetPlayerId } = message.payload;
+            const targetPlayer = room.players.get(targetPlayerId);
+            
+            if (spectator?.isEliminated && targetPlayer && !targetPlayer.isEliminated) {
+              ws.send(JSON.stringify({
+                type: 'spectator_update',
+                payload: {
+                  spectatingPlayerId: targetPlayerId,
+                  playerName: targetPlayer.name,
+                  score: targetPlayer.score,
+                  totalScore: targetPlayer.totalScore,
+                  cardsRemaining: targetPlayer.cardsRemaining
+                }
+              }));
             }
           }
         }
@@ -354,55 +600,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           if (player) {
             player.score = score;
             player.cardsRemaining = cardsRemaining;
-            player.finished = finished;
-
+            
+            // Only mark finished if not already finished
             if (finished && !player.finished) {
+              player.finished = finished;
               broadcastToRoom(room, {
                 type: 'player_finished',
                 payload: { playerId, playerName: player.name }
               });
             }
 
-            for (const [pid, player] of Array.from(room.players.entries())) {
+            for (const [pid, pl] of Array.from(room.players.entries())) {
               const opponentsForPlayer = Array.from(room.players.values())
                 .filter(p => p.id !== pid)
                 .map(p => ({
                   id: p.id,
                   name: p.name,
                   score: p.score,
+                  totalScore: p.totalScore,
                   cardsRemaining: p.cardsRemaining,
-                  finished: p.finished
+                  finished: p.finished,
+                  isEliminated: p.isEliminated
                 }));
 
-              if (player.ws.readyState === WebSocket.OPEN) {
-                player.ws.send(JSON.stringify({
+              if (pl.ws.readyState === WebSocket.OPEN) {
+                pl.ws.send(JSON.stringify({
                   type: 'opponent_update',
                   payload: { opponents: opponentsForPlayer }
                 }));
               }
-            }
-
-            const playersArray = Array.from(room.players.values());
-            const allFinished = playersArray.every(p => 
-              p.finished || p.cardsRemaining === 0
-            );
-
-            if (allFinished) {
-              room.status = 'finished';
-              const ranking = playersArray
-                .sort((a, b) => b.score - a.score)
-                .map(p => ({
-                  id: p.id,
-                  name: p.name,
-                  score: p.score,
-                  cardsRemaining: p.cardsRemaining,
-                  finished: p.finished
-                }));
-
-              broadcastToRoom(room, {
-                type: 'game_over',
-                payload: { ranking }
-              });
             }
           }
         }
