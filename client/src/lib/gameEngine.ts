@@ -534,13 +534,8 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   
   console.log(`[BONUS] After preservation - Slot1: ${preservedSlot1.card?.value ?? 'null'}, Slot2: ${preservedSlot2.card?.value ?? 'null'}`)
   
-  // Handle discard pile - add old card from the slot we're replacing
-  let newDiscardPile = [...gameState.discardPile];
-  if (slotNumber === 1 && gameState.bonusSlot1.card) {
-    newDiscardPile.push({ ...gameState.bonusSlot1.card });
-  } else if (slotNumber === 2 && gameState.bonusSlot2.card) {
-    newDiscardPile.push({ ...gameState.bonusSlot2.card });
-  }
+  // Keep discard pile unchanged - old bonus slot card just disappears
+  const newDiscardPile = [...gameState.discardPile];
   
   // Update combo
   const newCombo = gameState.combo + 1;
