@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Copy, Users, Check, Crown, Play, Loader2 } from "lucide-react";
+import { ArrowLeft, Copy, Users, Check, Crown, Play, Loader2, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,16 @@ export default function LobbyPage() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Check for invite link parameter on load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode = urlParams.get('join');
+    if (joinCode) {
+      setRoomCode(joinCode.toUpperCase());
+      setView('joining');
+    }
+  }, []);
 
   const connectWebSocket = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -219,6 +229,17 @@ export default function LobbyPage() {
       navigator.clipboard.writeText(room.code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const copyInviteLink = () => {
+    if (room) {
+      const inviteUrl = `${window.location.origin}/lobby?join=${room.code}`;
+      navigator.clipboard.writeText(inviteUrl);
+      toast({
+        title: "Link kopiert!",
+        description: "Einladungslink wurde in die Zwischenablage kopiert.",
+      });
     }
   };
 
@@ -443,9 +464,16 @@ export default function LobbyPage() {
                       {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Teile diesen Code mit deinen Freunden
-                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={copyInviteLink}
+                    className="mt-2 text-cyan-400 border-cyan-500/50 hover:bg-cyan-500/10"
+                    data-testid="button-copy-link"
+                  >
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Einladungslink kopieren
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
