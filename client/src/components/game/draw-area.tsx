@@ -63,18 +63,7 @@ export function DrawArea({
 
   return (
     <div className="relative z-20 p-4 pb-6 bg-[#000814]/95 border-t border-amber-500/30">
-      <div className="flex items-center justify-center gap-4 max-w-lg mx-auto">
-        <AnimatePresence mode="wait">
-          <BonusSlot 
-            key="slot1"
-            card={bonusSlot1.card} 
-            isActive={bonusSlot1.isActive} 
-            slotNumber={1}
-            hasSelectedCard={!!selectedCardId}
-            onClick={() => onPlayOnSlot(1)}
-          />
-        </AnimatePresence>
-
+      <div className="flex items-center justify-center gap-3 max-w-xl mx-auto">
         <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <motion.button
@@ -137,6 +126,17 @@ export function DrawArea({
           )}
         </motion.button>
 
+        <AnimatePresence mode="wait">
+          <BonusSlot 
+            key="slot1"
+            card={bonusSlot1.card} 
+            isActive={bonusSlot1.isActive} 
+            slotNumber={1}
+            hasSelectedCard={!!selectedCardId}
+            onClick={() => onPlayOnSlot(1)}
+          />
+        </AnimatePresence>
+
         <div className="relative">
           {discardTop ? (
             <motion.div
@@ -161,8 +161,6 @@ export function DrawArea({
           )}
         </div>
 
-        <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
-
         <AnimatePresence mode="wait">
           <BonusSlot 
             key="slot2"
@@ -173,6 +171,8 @@ export function DrawArea({
             onClick={() => onPlayOnSlot(2)}
           />
         </AnimatePresence>
+
+        <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
       </div>
       
       <p className="text-center text-gray-500 text-xs mt-3">

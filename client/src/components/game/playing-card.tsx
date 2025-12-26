@@ -166,70 +166,79 @@ interface BonusSlotProps {
 }
 
 export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick }: BonusSlotProps) {
+  const comboLabel = slotNumber === 1 ? '4x' : '7x';
+  
   if (!isActive) {
     return (
-      <div 
-        className="w-14 h-20 rounded-lg flex items-center justify-center"
-        style={{
-          background: 'rgba(0, 0, 0, 0.3)',
-          border: '2px dashed rgba(100, 100, 100, 0.3)',
-        }}
-      >
-        <span className="text-gray-600 text-xs font-medium">
-          {slotNumber === 1 ? '4x' : '7x'}
-        </span>
+      <div className="flex flex-col items-center gap-1">
+        <div 
+          className="w-14 h-20 rounded-lg flex items-center justify-center relative"
+          style={{
+            background: 'rgba(0, 0, 0, 0.4)',
+            border: '2px solid rgba(100, 100, 100, 0.4)',
+          }}
+        >
+          <span className="text-gray-500 text-3xl font-bold">X</span>
+        </div>
+        <span className="text-gray-500 text-[10px] font-bold tracking-wide">{comboLabel} COMBO</span>
       </div>
     );
   }
 
   if (!card) {
     return (
-      <motion.button 
-        className="w-14 h-20 rounded-lg flex items-center justify-center"
-        style={{
-          background: hasSelectedCard ? 'rgba(212, 175, 55, 0.2)' : 'rgba(212, 175, 55, 0.1)',
-          border: '2px dashed #D4AF37',
-          boxShadow: hasSelectedCard 
-            ? '0 0 25px rgba(212, 175, 55, 0.6)' 
-            : '0 0 15px rgba(212, 175, 55, 0.3)',
-          cursor: hasSelectedCard ? 'pointer' : 'default'
-        }}
-        onClick={hasSelectedCard ? onClick : undefined}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ 
-          opacity: 1, 
-          scale: 1,
-          boxShadow: hasSelectedCard 
-            ? ['0 0 25px rgba(212, 175, 55, 0.6)', '0 0 35px rgba(212, 175, 55, 0.8)', '0 0 25px rgba(212, 175, 55, 0.6)']
-            : ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
-        }}
-        whileHover={hasSelectedCard ? { scale: 1.05 } : {}}
-        whileTap={hasSelectedCard ? { scale: 0.95 } : {}}
-        transition={{ 
-          duration: 0.3,
-          boxShadow: { duration: 1.5, repeat: Infinity }
-        }}
-        data-testid={`bonus-slot-${slotNumber}`}
-      >
-        <span className="text-amber-400 text-xs font-bold">
-          {hasSelectedCard ? 'HIER' : 'AKTIV'}
-        </span>
-      </motion.button>
+      <div className="flex flex-col items-center gap-1">
+        <motion.button 
+          className="w-14 h-20 rounded-lg flex items-center justify-center"
+          style={{
+            background: hasSelectedCard ? 'rgba(212, 175, 55, 0.2)' : 'rgba(212, 175, 55, 0.1)',
+            border: '2px dashed #D4AF37',
+            boxShadow: hasSelectedCard 
+              ? '0 0 25px rgba(212, 175, 55, 0.6)' 
+              : '0 0 15px rgba(212, 175, 55, 0.3)',
+            cursor: hasSelectedCard ? 'pointer' : 'default'
+          }}
+          onClick={hasSelectedCard ? onClick : undefined}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ 
+            opacity: 1, 
+            scale: 1,
+            boxShadow: hasSelectedCard 
+              ? ['0 0 25px rgba(212, 175, 55, 0.6)', '0 0 35px rgba(212, 175, 55, 0.8)', '0 0 25px rgba(212, 175, 55, 0.6)']
+              : ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
+          }}
+          whileHover={hasSelectedCard ? { scale: 1.05 } : {}}
+          whileTap={hasSelectedCard ? { scale: 0.95 } : {}}
+          transition={{ 
+            duration: 0.3,
+            boxShadow: { duration: 1.5, repeat: Infinity }
+          }}
+          data-testid={`bonus-slot-${slotNumber}`}
+        >
+          <span className="text-amber-400 text-xs font-bold">
+            {hasSelectedCard ? 'HIER' : 'AKTIV'}
+          </span>
+        </motion.button>
+        <span className="text-amber-400 text-[10px] font-bold tracking-wide">{comboLabel} COMBO</span>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      className="relative"
-    >
-      <PlayingCard
-        card={card}
-        isPlayable={false}
-        isCovered={false}
-        size="md"
-      />
-    </motion.div>
+    <div className="flex flex-col items-center gap-1">
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        className="relative"
+      >
+        <PlayingCard
+          card={card}
+          isPlayable={false}
+          isCovered={false}
+          size="md"
+        />
+      </motion.div>
+      <span className="text-amber-400 text-[10px] font-bold tracking-wide">{comboLabel} COMBO</span>
+    </div>
   );
 }

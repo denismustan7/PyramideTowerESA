@@ -1,0 +1,20 @@
+Bitte aktualisiere das Spiel so, dass es sich exakt nach folgenden Regeln verhält:
+1. Karten-Design & Platzierung (wie im Bild)
+• Optik: Karten müssen exakt wie bei Magic Tower aussehen: Reinweißes Blatt, abgerundete Ecken, extremer Fokus auf große, fette Zahlen in der Mitte. Keine Markierungen für passende Züge.
+• Hintergrund: Dunkles, edles Nachtblau mit einem leuchtenden, schmalen Zeitbalken am oberen Rand (Farbverlauf Cyan zu Rot).
+• Layout: Drei Karten-Pyramiden im oberen Bereich, die sich leicht überlappen.
+2. Sichtbarkeit & Sperr-Logik (Ebenen-System)
+• Reihe 1 (Vordergrund): Diese Karten sind offen, voll beleuchtet und aktiv spielbar.
+• Reihe 2 (Direkt dahinter): Diese Karten sind offen sichtbar, aber mit einem dunklen Overlay (ca. 50% Transparenz) verdunkelt. Sie sind gesperrt und reagieren nicht auf Taps, solange sie von Karten der Reihe 1 überdeckt werden.
+• Reihe 3 und höher: Alle weiteren Karten in den hinteren Ebenen sind komplett verdeckt (Rückseite).
+• Nachrück-Logik: Sobald eine Karte aus Reihe 1 entfernt wird, wird die nun freigewordene Karte aus Reihe 2 hell/aktiv. Eine Karte aus Reihe 3 wird daraufhin umgedreht und rückt in den Status "offen, aber verdunkelt" (Reihe 2) nach.
+3. Dynamische Combo-Slots (Belohnungs-System)
+• Platzierung: Erzeuge zwei leere Karten-Slots links und rechts neben dem Haupt-Ablagestapel.
+• Aktivierung durch Combo: * Sobald eine 4er-Combo erreicht wird, ziehe automatisch die nächste Karte vom Deck und platziere sie offen auf dem ersten Extra-Slot.
+• Sobald eine 7er-Combo erreicht wird, ziehe die nächste Karte vom Deck für den zweiten Extra-Slot.
+• Spielmechanik: Diese Karten fungieren als zusätzliche Ablagestapel. Der Spieler kann nun passend (+1/-1) auf alle drei Stapel (Hauptstapel + 2 Extra-Slots) spielen.
+• Reset-Regel: Wenn der Spieler manuell auf das Deck tippt, um eine neue Karte zu ziehen, werden die Extra-Slots sofort gelöscht und deaktiviert. Sie erscheinen erst bei der nächsten Combo wieder.
+4. Multiplayer (6 Spieler Room)
+• Funktion: Implementiere ein Lobby-System, in dem ich einen "Room öffnen" kann.
+• Invite: Generiere einen Code, mit dem bis zu 5 Freunde (insgesamt 6 Spieler) beitreten können.
+• Synchronisation: Alle Spieler müssen das exakt gleiche Karten-Deck (Shuffle-Seed) haben.
