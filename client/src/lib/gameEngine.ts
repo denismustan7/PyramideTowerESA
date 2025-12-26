@@ -54,6 +54,28 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+// Generate a deterministic bonus card based on seed, slot number, and activation count
+function generateBonusCard(gameSeed: number, slotNumber: 1 | 2, activationCount: number): Card {
+  // Create a unique seed for this specific bonus card generation
+  const uniqueSeed = gameSeed ^ (slotNumber * 1000000) ^ (activationCount * 10000);
+  const random = seededRandom(uniqueSeed);
+  
+  const suits: Suit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
+  const suitIndex = Math.floor(random() * 4);
+  const valueIndex = Math.floor(random() * 13);
+  
+  const suit = suits[suitIndex];
+  const value = CARD_VALUES[valueIndex];
+  
+  return {
+    id: `bonus-${slotNumber}-${activationCount}-${suit}-${value}`,
+    suit,
+    value,
+    isFaceUp: true,
+    isPlayable: false
+  };
+}
+
 // Create the tri-peaks pyramid structure
 // Standard tri-peaks layout:
 // Peak 0:       [0]
@@ -157,8 +179,9 @@ function createPyramids(cards: Card[]): PyramidNode[][] {
 
 // Initialize a new game
 export function initGame(level: number = 1, seed?: number): GameState {
+  const gameSeed = seed ?? Math.floor(Math.random() * 1000000);
   const deck = generateDeck();
-  const shuffled = shuffleDeck(deck, seed);
+  const shuffled = shuffleDeck(deck, gameSeed);
   
   // First 28 cards go to the pyramids
   const pyramidCards = shuffled.slice(0, 28);
@@ -180,6 +203,9 @@ export function initGame(level: number = 1, seed?: number): GameState {
     discardPile: [discardCard],
     bonusSlot1: { card: null, isActive: false },
     bonusSlot2: { card: null, isActive: false },
+    bonusSlot1ActivationCount: 0,
+    bonusSlot2ActivationCount: 0,
+    gameSeed,
     score: 0,
     combo: 0,
     maxCombo: 0,
@@ -306,12 +332,16 @@ export function playCard(gameState: GameState, cardId: string): GameState {
     newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
   }
   
-  // Check and activate bonus slots based on combo
+  // Check and activate bonus slots based on combo - generate a card automatically
   if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
-    newState.bonusSlot1 = { ...newState.bonusSlot1, isActive: true };
+    const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
+    newState.bonusSlot1 = { card: bonusCard, isActive: true };
+    newState.bonusSlot1ActivationCount++;
   }
   if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
-    newState.bonusSlot2 = { ...newState.bonusSlot2, isActive: true };
+    const bonusCard = generateBonusCard(newState.gameSeed, 2, newState.bonusSlot2ActivationCount);
+    newState.bonusSlot2 = { card: bonusCard, isActive: true };
+    newState.bonusSlot2ActivationCount++;
   }
   
   return newState;
@@ -349,7 +379,14 @@ export function drawCard(gameState: GameState): GameState {
   newState.discardPile.push(drawnCard);
   
   // Reset combo and deactivate bonus slots
+  // Increment activation counters if slots were active (ensures next combo gets a new card)
   newState.combo = 0;
+  if (newState.bonusSlot1.isActive) {
+    newState.bonusSlot1ActivationCount++;
+  }
+  if (newState.bonusSlot2.isActive) {
+    newState.bonusSlot2ActivationCount++;
+  }
   newState.bonusSlot1 = { card: null, isActive: false };
   newState.bonusSlot2 = { card: null, isActive: false };
   
@@ -359,7 +396,7 @@ export function drawCard(gameState: GameState): GameState {
 // Check if a card can be played on a bonus slot
 export function canPlayOnBonusSlot(gameState: GameState, cardId: string, slotNumber: 1 | 2): boolean {
   const slot = slotNumber === 1 ? gameState.bonusSlot1 : gameState.bonusSlot2;
-  if (!slot.isActive) return false;
+  if (!slot.isActive || !slot.card) return false;
   
   // Find the card in pyramids
   let cardToPlay: Card | null = null;
@@ -375,10 +412,7 @@ export function canPlayOnBonusSlot(gameState: GameState, cardId: string, slotNum
   
   if (!cardToPlay) return false;
   
-  // If slot is empty, any card can be placed
-  if (!slot.card) return true;
-  
-  // Otherwise, check +1/-1 rule
+  // Check +1/-1 rule against the bonus slot's card
   return canPlayCard(cardToPlay.value, slot.card.value);
 }
 
@@ -413,11 +447,19 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   
   if (!playedCard) return gameState;
   
-  // Place card on bonus slot
+  // Place card on bonus slot (replaces the existing card)
   playedCard.isFaceUp = true;
   if (slotNumber === 1) {
+    // Add old bonus slot card to discard pile before replacing
+    if (newState.bonusSlot1.card) {
+      newState.discardPile = [...gameState.discardPile, newState.bonusSlot1.card];
+    }
     newState.bonusSlot1 = { card: playedCard, isActive: true };
   } else {
+    // Add old bonus slot card to discard pile before replacing
+    if (newState.bonusSlot2.card) {
+      newState.discardPile = [...gameState.discardPile, newState.bonusSlot2.card];
+    }
     newState.bonusSlot2 = { card: playedCard, isActive: true };
   }
   
@@ -452,12 +494,16 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
     newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
   }
   
-  // Check and activate bonus slots based on combo (if not already active)
+  // Check and activate bonus slots based on combo - generate a card automatically
   if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
-    newState.bonusSlot1 = { ...newState.bonusSlot1, isActive: true };
+    const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
+    newState.bonusSlot1 = { card: bonusCard, isActive: true };
+    newState.bonusSlot1ActivationCount++;
   }
   if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
-    newState.bonusSlot2 = { ...newState.bonusSlot2, isActive: true };
+    const bonusCard = generateBonusCard(newState.gameSeed, 2, newState.bonusSlot2ActivationCount);
+    newState.bonusSlot2 = { card: bonusCard, isActive: true };
+    newState.bonusSlot2ActivationCount++;
   }
   
   return newState;

@@ -111,8 +111,15 @@ export default function GamePage() {
     if (canPlay(gameState, cardId)) {
       setGameState(prev => playCard(prev, cardId));
       setSelectedCardId(null);
-    } else if (gameState.bonusSlot1.isActive || gameState.bonusSlot2.isActive) {
-      setSelectedCardId(cardId);
+    } else if ((gameState.bonusSlot1.isActive && gameState.bonusSlot1.card) || 
+               (gameState.bonusSlot2.isActive && gameState.bonusSlot2.card)) {
+      // Check if this card can be played on any active bonus slot
+      if (canPlayOnBonusSlot(gameState, cardId, 1) || canPlayOnBonusSlot(gameState, cardId, 2)) {
+        setSelectedCardId(cardId);
+      } else {
+        setShakeCardId(cardId);
+        setTimeout(() => setShakeCardId(null), 300);
+      }
     } else {
       setShakeCardId(cardId);
       setTimeout(() => setShakeCardId(null), 300);

@@ -49,6 +49,9 @@ export interface GameState {
   discardPile: Card[]; // Face-up discard pile (top is current)
   bonusSlot1: BonusSlotState; // Unlocked at 4 combo
   bonusSlot2: BonusSlotState; // Unlocked at 7 combo
+  bonusSlot1ActivationCount: number; // How many times slot 1 has been activated (for deterministic generation)
+  bonusSlot2ActivationCount: number; // How many times slot 2 has been activated
+  gameSeed: number; // Seed for deterministic random generation
   score: number;
   combo: number; // Current combo multiplier
   maxCombo: number; // Highest combo achieved this game
