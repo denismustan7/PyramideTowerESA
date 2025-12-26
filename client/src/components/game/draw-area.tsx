@@ -67,7 +67,7 @@ export function DrawArea({
         <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} />
 
         <motion.button
-          className={`relative w-11 h-15 sm:w-12 sm:h-17 rounded-md flex items-center justify-center ${
+          className={`relative w-12 h-16 sm:w-14 sm:h-20 rounded-md flex items-center justify-center ${
             hasCards && !disabled
               ? 'cursor-pointer'
               : 'cursor-not-allowed'
@@ -156,7 +156,7 @@ export function DrawArea({
             </motion.div>
           ) : (
             <div 
-              className="w-11 h-15 sm:w-12 sm:h-17 rounded-md flex items-center justify-center"
+              className="w-12 h-16 sm:w-14 sm:h-20 rounded-md flex items-center justify-center"
               style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
             />
           )}

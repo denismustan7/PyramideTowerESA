@@ -36,7 +36,7 @@ interface TowerCardProps {
 function CardBack() {
   return (
     <div 
-      className="w-10 h-14 sm:w-11 sm:h-15 rounded-md overflow-hidden flex-shrink-0 relative"
+      className="w-12 h-16 sm:w-14 sm:h-20 rounded-md overflow-hidden flex-shrink-0 relative"
       style={{
         background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 25%, #1e3a5f 50%, #2c5282 75%, #1e3a5f 100%)',
         border: '2px solid #D4AF37',
@@ -69,7 +69,7 @@ function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick 
   return (
     <motion.button
       className={cn(
-        "w-10 h-14 sm:w-11 sm:h-15 rounded-md flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0",
+        "w-12 h-16 sm:w-14 sm:h-20 rounded-md flex flex-col items-center justify-center relative overflow-hidden flex-shrink-0",
         "transition-all duration-150",
         isPlayable ? "cursor-pointer" : "cursor-default pointer-events-none",
         isSelected && "ring-2 ring-amber-400 ring-offset-1"
@@ -135,12 +135,12 @@ interface SingleTowerProps {
 
 function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCardId }: SingleTowerProps) {
   const numRows = TOWER_ROWS.length;
-  // Mobile: w-10 (40px), Desktop: w-11 (44px)
+  // Mobile: w-12 (48px), Desktop: w-14 (56px)
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-  const cardWidth = isMobile ? 40 : 44;
+  const cardWidth = isMobile ? 48 : 56;
   const cardGap = 1;
   const rowOffset = (cardWidth + cardGap) / 2;
-  const verticalOverlap = isMobile ? 28 : 32;
+  const verticalOverlap = isMobile ? 32 : 40;
 
   const getRowNodes = (rowIdx: number): PyramidNode[] => {
     return nodes.filter(n => n.row === rowIdx);
@@ -168,7 +168,7 @@ function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCard
                 return (
                   <div 
                     key={`empty-${towerIndex}-${rowIdx}-${colIdx}`} 
-                    className="w-10 h-14 sm:w-11 sm:h-15 flex-shrink-0"
+                    className="w-12 h-16 sm:w-14 sm:h-20 flex-shrink-0"
                     style={{ visibility: 'hidden' }}
                   />
                 );
@@ -199,7 +199,7 @@ export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCard
   };
 
   return (
-    <div className="flex items-end justify-center scale-[0.75] sm:scale-90 origin-top" style={{ marginTop: '0px' }}>
+    <div className="flex items-end justify-center scale-[0.65] sm:scale-[0.85] origin-top" style={{ marginTop: '0px' }}>
       {Array.from({ length: NUM_TOWERS }, (_, towerIdx) => (
         <div 
           key={`tower-${towerIdx}`}
