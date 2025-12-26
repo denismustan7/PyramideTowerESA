@@ -567,21 +567,48 @@ export default function MultiplayerGamePage() {
         isPaused={false}
       />
 
-      <div className="absolute top-16 left-2 z-30 flex items-center gap-2">
-        <div className="flex items-center gap-1 px-2 py-1 bg-cyan-500/20 rounded-full border border-cyan-500/30">
-          <Users className="w-3 h-3 text-cyan-400" />
-          <span className="text-xs text-cyan-400">{roomCode}</span>
-        </div>
+      {/* Circular Round Indicator */}
+      <div className="absolute top-16 left-2 z-30">
         <div 
-          className="px-2 py-1 rounded-full border"
-          style={{ 
-            background: 'rgba(212, 175, 55, 0.1)',
-            borderColor: 'rgba(212, 175, 55, 0.3)'
+          className="relative w-12 h-12 flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(0, 8, 20, 0.95))',
+            borderRadius: '50%',
+            border: '2px solid rgba(212, 175, 55, 0.4)',
+            boxShadow: '0 0 15px rgba(212, 175, 55, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.5)'
           }}
         >
-          <span className="text-xs" style={{ color: '#D4AF37' }}>
-            Runde {currentRound}/{totalRounds}
-          </span>
+          {/* Progress ring */}
+          <svg className="absolute inset-0 w-full h-full -rotate-90">
+            <circle
+              cx="24"
+              cy="24"
+              r="20"
+              fill="none"
+              stroke="rgba(212, 175, 55, 0.2)"
+              strokeWidth="3"
+            />
+            <circle
+              cx="24"
+              cy="24"
+              r="20"
+              fill="none"
+              stroke="#D4AF37"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${(currentRound / totalRounds) * 125.6} 125.6`}
+              style={{ transition: 'stroke-dasharray 0.5s ease' }}
+            />
+          </svg>
+          {/* Round number */}
+          <div className="text-center z-10">
+            <span className="text-sm font-bold" style={{ color: '#D4AF37' }}>
+              {currentRound}
+            </span>
+            <span className="text-[8px] block -mt-0.5" style={{ color: 'rgba(212, 175, 55, 0.7)' }}>
+              /{totalRounds}
+            </span>
+          </div>
         </div>
       </div>
 

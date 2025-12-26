@@ -72,20 +72,10 @@ export function LiveScoreboard({
   
   return (
     <div 
-      className="fixed right-2 top-16 z-30 w-48 rounded-lg overflow-hidden"
+      className="fixed right-2 top-16 z-30 w-44 rounded-lg overflow-hidden"
       style={{ background: 'linear-gradient(to bottom, rgba(0, 20, 40, 0.95), rgba(0, 8, 20, 0.95))' }}
       data-testid="live-scoreboard"
     >
-      <div 
-        className="px-3 py-2 border-b border-cyan-900/50 flex items-center justify-between"
-        style={{ background: 'rgba(212, 175, 55, 0.1)' }}
-      >
-        <span className="text-xs font-semibold" style={{ color: '#D4AF37' }}>
-          Runde {currentRound}/{totalRounds}
-        </span>
-        <Trophy className="w-3 h-3" style={{ color: '#D4AF37' }} />
-      </div>
-      
       <div className="p-1.5 space-y-1">
         <AnimatePresence mode="popLayout">
           {playersWithRanks.map((player) => {
