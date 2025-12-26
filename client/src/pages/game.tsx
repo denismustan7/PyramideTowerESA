@@ -19,7 +19,7 @@ import {
   getRank
 } from "@/lib/gameEngine";
 import type { GameState } from "@shared/schema";
-import { BrickPyramid } from "@/components/game/brick-pyramid";
+import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
 import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
 import { GameOverOverlay } from "@/components/game/game-over-overlay";
@@ -215,7 +215,7 @@ export default function GamePage() {
       />
 
       <div className="flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden">
-        <BrickPyramid
+        <TriPeaksTowers
           pyramid={gameState.pyramid}
           onCardClick={handleCardClick}
           selectedCardId={selectedCardId}

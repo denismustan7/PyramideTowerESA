@@ -10,8 +10,11 @@ import {
   TIME_DECREASE_PER_LEVEL,
   BONUS_SLOT_1_COMBO,
   BONUS_SLOT_2_COMBO,
-  PYRAMID_ROWS,
-  TOTAL_PYRAMID_CARDS,
+  TOWER_ROWS,
+  CARDS_PER_TOWER,
+  NUM_TOWERS,
+  TOTAL_TABLEAU_CARDS,
+  DRAW_PILE_SIZE,
   getRank
 } from '@shared/schema';
 
@@ -78,103 +81,92 @@ function generateBonusCard(gameSeed: number, slotNumber: 1 | 2, activationCount:
   };
 }
 
-// Create the brick-pattern pyramid structure
-// Layout (visually from top to bottom, back to front):
-// Row 0 (back):   5 cards   (even row - no offset)
-// Row 1:          6 cards   (odd row - offset by half card)
-// Row 2:          7 cards   (even row - no offset)
-// Row 3:          8 cards   (odd row - offset)
-// Row 4:          9 cards   (even row - no offset)
-// Row 5 (front): 10 cards   (odd row - offset)
-// Total: 45 cards
-// 
-// A card in row R, col C is covered by the TWO cards below it in the larger row
-// Coverage in brick pattern: card at (R,C) covered by (R+1, C) and (R+1, C+1) for even rows
-// For odd rows: (R,C) covered by (R+1, C-1) and (R+1, C) - but we need to account for offset
+// Create the tri-peaks tower structure (3 separate small towers)
+// Each tower has 4 rows: 1, 2, 3, 4 cards = 10 cards per tower
+// Total: 30 cards across all towers
 //
-// Visibility rules:
-// - Front row (5): Face up, bright, playable
-// - Second row (4): Face up, darkened, locked until uncovered
-// - Back rows (0-3): Face down until they become front/second row
+// Layout for each tower (brick pattern):
+// Row 0 (back/top):    1 card  (peak)
+// Row 1:               2 cards
+// Row 2:               3 cards
+// Row 3 (front/bottom): 4 cards
+//
+// Coverage: A card at (row, col) is covered by cards at (row+1, col) and (row+1, col+1)
+// Individual unlocking: Card becomes playable when ALL its covering cards are removed
 
-function createBrickPyramid(cards: Card[]): PyramidNode[] {
+function createTriPeaksTowers(cards: Card[]): { pyramid: PyramidNode[], towers: PyramidNode[][] } {
+  const towers: PyramidNode[][] = [[], [], []];
   const pyramid: PyramidNode[] = [];
   let cardIndex = 0;
-  const numRows = PYRAMID_ROWS.length; // 6 rows
+  const numRows = TOWER_ROWS.length; // 4 rows
   
-  // PYRAMID_ROWS = [5, 6, 7, 8, 9, 10] - cards per row from back to front
-  // Row 0 = 5 cards (back/top), Row 5 = 10 cards (front/bottom)
-  for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
-    const cardsInRow = PYRAMID_ROWS[rowIdx];
-    for (let col = 0; col < cardsInRow; col++) {
-      pyramid.push({
-        card: cards[cardIndex++],
-        row: rowIdx,
-        col,
-        coveredBy: [],
-        isSecondRow: false
-      });
+  // Create each tower
+  for (let towerIdx = 0; towerIdx < NUM_TOWERS; towerIdx++) {
+    for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
+      const cardsInRow = TOWER_ROWS[rowIdx];
+      for (let col = 0; col < cardsInRow; col++) {
+        const node: PyramidNode = {
+          card: cards[cardIndex++],
+          tower: towerIdx,
+          row: rowIdx,
+          col,
+          coveredBy: [],
+          isDimmed: false
+        };
+        towers[towerIdx].push(node);
+        pyramid.push(node);
+      }
     }
   }
   
-  // Set up coverage relationships - which cards from the FRONT cover cards in BACK
-  // A card in row N is covered by overlapping cards in row N+1 (the row closer to front)
-  // 
-  // Brick offset alternates: even rows (0,2,4) are left-aligned, odd rows (1,3,5) are offset right
-  // When going from even row to odd row: card at col C is covered by (row+1, col) and (row+1, col+1)
-  // When going from odd row to even row: card at col C is covered by (row+1, col) and (row+1, col+1)
-  // Because the odd row is shifted right, the relationship changes slightly
-  
-  for (const node of pyramid) {
-    if (node.row < numRows - 1) {
-      // This card can be covered by cards in the next row (closer to front)
-      const nextRowCards = pyramid.filter(n => n.row === node.row + 1);
-      const isThisRowOdd = node.row % 2 === 1;
-      
-      // For brick pattern, cards in back rows are covered by 2 adjacent cards in front
-      // Even row (no offset) -> Odd row (offset): col C covered by cols C and C+1 in next row
-      // Odd row (offset) -> Even row (no offset): col C covered by cols C and C+1 in next row
-      // (This is because the next row has one more card, so indices work out the same)
-      const coveringCols = [node.col, node.col + 1];
-      
-      node.coveredBy = nextRowCards
-        .filter(n => n.card && coveringCols.includes(n.col))
-        .map(n => n.card!.id);
+  // Set up coverage relationships within each tower
+  // A card at (row, col) is covered by two cards in the next row: (row+1, col) and (row+1, col+1)
+  for (let towerIdx = 0; towerIdx < NUM_TOWERS; towerIdx++) {
+    const tower = towers[towerIdx];
+    
+    for (const node of tower) {
+      if (node.row < numRows - 1) {
+        // Find cards in the next row that cover this card
+        const coveringCards = tower.filter(n => 
+          n.row === node.row + 1 && 
+          (n.col === node.col || n.col === node.col + 1) &&
+          n.card
+        );
+        
+        node.coveredBy = coveringCards.map(n => n.card!.id);
+      }
     }
   }
   
-  // Set initial visibility states
-  const frontRowIdx = numRows - 1; // Row 5 (10 cards)
-  const secondRowIdx = numRows - 2; // Row 4 (9 cards)
-  
+  // Set initial visibility - individual card unlocking based on coverage
   for (const node of pyramid) {
     if (!node.card) continue;
     
-    if (node.row === frontRowIdx) {
-      // Front row: face up, playable
+    const hasCoveringCards = node.coveredBy.length > 0;
+    
+    if (!hasCoveringCards) {
+      // Front row (no cards covering this one): face up, playable
       node.card.isFaceUp = true;
       node.card.isPlayable = true;
-      node.isSecondRow = false;
-    } else if (node.row === secondRowIdx) {
-      // Second row: face up but darkened, not playable yet
+      node.isDimmed = false;
+    } else {
+      // Has covering cards: face up but dimmed, not playable
       node.card.isFaceUp = true;
       node.card.isPlayable = false;
-      node.isSecondRow = true;
-    } else {
-      // Back rows: face down
-      node.card.isFaceUp = false;
-      node.card.isPlayable = false;
-      node.isSecondRow = false;
+      node.isDimmed = true;
     }
   }
   
-  return pyramid;
+  return { pyramid, towers };
 }
 
-// Legacy function for backwards compatibility
-function createPyramids(cards: Card[]): PyramidNode[][] {
-  // Return empty array - we now use createBrickPyramid
-  return [[], [], []];
+// Helper to rebuild towers array from pyramid
+function rebuildTowersFromPyramid(pyramid: PyramidNode[]): PyramidNode[][] {
+  const towers: PyramidNode[][] = [[], [], []];
+  for (const node of pyramid) {
+    towers[node.tower].push(node);
+  }
+  return towers;
 }
 
 // Initialize a new game
@@ -183,23 +175,23 @@ export function initGame(level: number = 1, seed?: number): GameState {
   const deck = generateDeck();
   const shuffled = shuffleDeck(deck, gameSeed);
   
-  // First 45 cards go to the pyramid
-  const pyramidCards = shuffled.slice(0, TOTAL_PYRAMID_CARDS);
-  const pyramid = createBrickPyramid(pyramidCards);
+  // First 30 cards go to the three towers
+  const tableauCards = shuffled.slice(0, TOTAL_TABLEAU_CARDS);
+  const { pyramid, towers } = createTriPeaksTowers(tableauCards);
   
   // Next card goes to discard pile (face up)
-  const discardCard = shuffled[TOTAL_PYRAMID_CARDS];
+  const discardCard = shuffled[TOTAL_TABLEAU_CARDS];
   discardCard.isFaceUp = true;
   
-  // Remaining cards are the draw pile (52 - 45 - 1 = 6 cards)
-  const drawPile = shuffled.slice(TOTAL_PYRAMID_CARDS + 1);
+  // Remaining 21 cards are the draw pile (52 - 30 - 1 = 21 cards)
+  const drawPile = shuffled.slice(TOTAL_TABLEAU_CARDS + 1);
   
   // Calculate time based on level
   const totalTime = Math.max(30, BASE_TIME - (level - 1) * TIME_DECREASE_PER_LEVEL);
   
   return {
     pyramid,
-    pyramids: [[], [], []], // Deprecated, kept for compatibility
+    towers,
     drawPile,
     discardPile: [discardCard],
     bonusSlot1: { card: null, isActive: false },
@@ -215,7 +207,7 @@ export function initGame(level: number = 1, seed?: number): GameState {
     totalTime,
     towersCleared: 0,
     phase: 'playing',
-    cardsRemaining: TOTAL_PYRAMID_CARDS
+    cardsRemaining: TOTAL_TABLEAU_CARDS
   };
 }
 
@@ -299,7 +291,10 @@ export function playCard(gameState: GameState, cardId: string): GameState {
   newState.cardsRemaining--;
   
   // Update playability and visibility of other cards
-  newState.pyramid = updateBrickPlayability(newState.pyramid);
+  newState.pyramid = updateTriPeaksPlayability(newState.pyramid);
+  
+  // Sync towers with updated pyramid
+  newState.towers = rebuildTowersFromPyramid(newState.pyramid);
   
   // Check for win condition
   if (newState.cardsRemaining === 0) {
@@ -444,7 +439,10 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   newState.cardsRemaining--;
   
   // Update playability of other cards
-  newState.pyramid = updateBrickPlayability(newState.pyramid);
+  newState.pyramid = updateTriPeaksPlayability(newState.pyramid);
+  
+  // Sync towers with updated pyramid
+  newState.towers = rebuildTowersFromPyramid(newState.pyramid);
   
   // Check for win condition
   if (newState.cardsRemaining === 0) {
@@ -470,80 +468,22 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   return newState;
 }
 
-// Update playability and visibility for brick pyramid after a card is removed
-function updateBrickPlayability(pyramid: PyramidNode[]): PyramidNode[] {
-  const numRows = PYRAMID_ROWS.length;
-  
-  // First pass: determine coverage status for all cards
-  const coverageInfo = pyramid.map(node => {
-    if (!node.card) return { node, isCovered: false, hasCard: false };
+// Update playability for tri-peaks after a card is removed
+// Individual unlocking: each card becomes playable when ALL its covering cards are removed
+function updateTriPeaksPlayability(pyramid: PyramidNode[]): PyramidNode[] {
+  return pyramid.map(node => {
+    if (!node.card) return node;
     
+    // Check if any of the covering cards still exist
     const isCovered = node.coveredBy.some(coverId => {
       return pyramid.some(n => n.card && n.card.id === coverId);
     });
     
-    return { node, isCovered, hasCard: true };
-  });
-  
-  // Find the current front row - the highest row number that has uncovered cards
-  const uncoveredRows = coverageInfo
-    .filter(info => info.hasCard && !info.isCovered)
-    .map(info => info.node.row);
-  
-  const frontRowIdx = uncoveredRows.length > 0 ? Math.max(...uncoveredRows) : numRows - 1;
-  const secondRowIdx = frontRowIdx - 1;
-  
-  // Second pass: update each node's visibility based on its position and coverage
-  return pyramid.map((node, idx) => {
-    if (!node.card) return node;
-    
-    const info = coverageInfo[idx];
-    
-    // Cards that are still covered keep their current state
-    // (Don't change visibility for covered cards)
-    if (info.isCovered) {
-      // Still covered - keep face down, not playable
-      // But if it's in the second row position, it should stay visible but darkened
-      if (node.row === secondRowIdx) {
-        return {
-          ...node,
-          isSecondRow: true,
-          card: {
-            ...node.card,
-            isFaceUp: true,
-            isPlayable: false
-          }
-        };
-      }
-      // Other covered cards stay face down
+    if (isCovered) {
+      // Still covered by at least one card: visible but dimmed, not playable
       return {
         ...node,
-        isSecondRow: false,
-        card: {
-          ...node.card,
-          isFaceUp: false,
-          isPlayable: false
-        }
-      };
-    }
-    
-    // Card is uncovered - determine its visibility based on row position
-    if (node.row === frontRowIdx) {
-      // Front row: face up, playable
-      return {
-        ...node,
-        isSecondRow: false,
-        card: {
-          ...node.card,
-          isFaceUp: true,
-          isPlayable: true
-        }
-      };
-    } else if (node.row === secondRowIdx) {
-      // Second row: face up but darkened, not playable
-      return {
-        ...node,
-        isSecondRow: true,
+        isDimmed: true,
         card: {
           ...node.card,
           isFaceUp: true,
@@ -551,14 +491,14 @@ function updateBrickPlayability(pyramid: PyramidNode[]): PyramidNode[] {
         }
       };
     } else {
-      // Other uncovered rows behind second row - stay face down until promoted
+      // No covering cards remain: fully visible, playable
       return {
         ...node,
-        isSecondRow: false,
+        isDimmed: false,
         card: {
           ...node.card,
-          isFaceUp: false,
-          isPlayable: false
+          isFaceUp: true,
+          isPlayable: true
         }
       };
     }

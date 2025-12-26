@@ -27,13 +27,14 @@ export interface Card {
   isPlayable: boolean; // Can be clicked (not covered by other cards)
 }
 
-// Pyramid node represents a card position in the brick-pattern pyramid
+// Pyramid node represents a card position in a tower
 export interface PyramidNode {
   card: Card | null; // null if card was removed
-  row: number; // 0 = top (smallest row), higher = bottom (front)
+  tower: number; // 0, 1, or 2 - which tower this card belongs to
+  row: number; // 0 = top/back (1 card), 3 = front/bottom (4 cards)
   col: number; // column position within the row
-  coveredBy: string[]; // IDs of cards covering this one (cards in lower row indices that overlap)
-  isSecondRow: boolean; // If true, this row is the "second row" (face up but darkened)
+  coveredBy: string[]; // IDs of cards that must be removed before this card is playable
+  isDimmed: boolean; // True if card is visible but still locked (covered by at least one card)
 }
 
 // Bonus slot state
@@ -44,9 +45,9 @@ export interface BonusSlotState {
 
 // Game state
 export interface GameState {
-  pyramid: PyramidNode[]; // Single brick-pattern pyramid (flattened array)
-  pyramids: PyramidNode[][]; // Deprecated - kept for compatibility
-  drawPile: Card[]; // Face-down draw pile
+  pyramid: PyramidNode[]; // All cards from all towers (flattened array)
+  towers: PyramidNode[][]; // Cards organized by tower [tower0, tower1, tower2]
+  drawPile: Card[]; // Face-down draw pile (21 cards)
   discardPile: Card[]; // Face-up discard pile (top is current)
   bonusSlot1: BonusSlotState; // Unlocked at 4 combo
   bonusSlot2: BonusSlotState; // Unlocked at 7 combo
@@ -117,11 +118,18 @@ export function canPlayCard(cardValue: CardValue, discardTopValue: CardValue): b
   return false;
 }
 
-// Game constants - Brick pyramid structure
-// Rows from top to bottom (back to front): 5, 6, 7, 8, 9, 10 = 45 cards total
-// Row 0 = back/top (5 cards), Row 5 = front/bottom (10 cards)
-export const PYRAMID_ROWS = [5, 6, 7, 8, 9, 10]; // Cards per row from back (top) to front (bottom)
-export const TOTAL_PYRAMID_CARDS = 45; // Total cards on the pyramid
+// Game constants - Tri-Peaks structure (3 small towers)
+// Each tower has 4 rows: 1, 2, 3, 4 cards = 10 cards per tower
+// Row 0 = back/top (1 card), Row 3 = front/bottom (4 cards)
+export const TOWER_ROWS = [1, 2, 3, 4]; // Cards per row in each tower (back to front)
+export const CARDS_PER_TOWER = 10; // 1+2+3+4 = 10 cards per tower
+export const NUM_TOWERS = 3;
+export const TOTAL_TABLEAU_CARDS = 30; // 3 towers × 10 cards = 30 cards
+export const DRAW_PILE_SIZE = 21; // 21 cards in draw pile
+
+// Legacy constants for backwards compatibility
+export const PYRAMID_ROWS = TOWER_ROWS;
+export const TOTAL_PYRAMID_CARDS = TOTAL_TABLEAU_CARDS;
 export const BASE_POINTS = 100;
 export const TOWER_BONUS = 500;
 export const PERFECT_BONUS = 5000;
