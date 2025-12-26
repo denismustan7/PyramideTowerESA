@@ -15,9 +15,10 @@ import {
   getRank
 } from "@/lib/gameEngine";
 import type { GameState, MultiplayerPlayer } from "@shared/schema";
-import { PyramidBoard } from "@/components/game/pyramid-board";
+import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
 import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
+import { playCardOnBonusSlot } from "@/lib/gameEngine";
 
 interface OpponentProgress {
   id: string;
@@ -117,6 +118,7 @@ export default function MultiplayerGamePage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [opponents, setOpponents] = useState<OpponentProgress[]>([]);
   const [shakeCardId, setShakeCardId] = useState<string | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [gameOver, setGameOver] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
   const [finalRanking, setFinalRanking] = useState<OpponentProgress[]>([]);
@@ -265,6 +267,18 @@ export default function MultiplayerGamePage() {
     });
   }, [gameState, toast, sendGameUpdate]);
 
+  const handlePlayOnBonusSlot = useCallback((slotNumber: 1 | 2) => {
+    if (!gameState || gameState.phase !== 'playing' || !selectedCardId) return;
+
+    setGameState(prev => {
+      if (!prev) return prev;
+      const newState = playCardOnBonusSlot(prev, selectedCardId, slotNumber);
+      sendGameUpdate(newState);
+      return newState;
+    });
+    setSelectedCardId(null);
+  }, [gameState, selectedCardId, sendGameUpdate]);
+
   const handleGoHome = () => {
     if (wsRef.current) {
       wsRef.current.close();
@@ -312,11 +326,11 @@ export default function MultiplayerGamePage() {
 
       <OpponentPanel opponents={opponents} />
 
-      <div className="flex-1 flex items-center justify-center p-2 relative z-10">
-        <PyramidBoard
-          pyramids={gameState.pyramids}
-          discardTopValue={discardTop?.value || null}
+      <div className="flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden">
+        <TriPeaksTowers
+          pyramid={gameState.pyramid}
           onCardClick={handleCardClick}
+          selectedCardId={selectedCardId}
           shakeCardId={shakeCardId}
         />
       </div>
@@ -324,7 +338,13 @@ export default function MultiplayerGamePage() {
       <DrawArea
         drawPile={gameState.drawPile}
         discardPile={gameState.discardPile}
+        bonusSlot1={gameState.bonusSlot1}
+        bonusSlot2={gameState.bonusSlot2}
+        selectedCardId={selectedCardId}
+        timeRemaining={gameState.timeRemaining}
+        maxTime={60}
         onDraw={handleDraw}
+        onPlayOnSlot={handlePlayOnBonusSlot}
         disabled={gameState.phase !== 'playing'}
       />
 
