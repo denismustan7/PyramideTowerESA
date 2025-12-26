@@ -142,30 +142,78 @@ export const TIME_DECREASE_PER_LEVEL = 5; // 5 seconds less per round starting f
 export const BONUS_SLOT_1_COMBO = 4; // Combo needed to unlock slot 1
 export const BONUS_SLOT_2_COMBO = 7; // Combo needed to unlock slot 2
 
+// Multiplayer configuration based on player count
+export const MULTIPLAYER_CONFIG = {
+  4: {
+    totalRounds: 8,
+    baseTimeRounds: 4, // Rounds 1-4 have 60 seconds
+    timeDecreaseStartRound: 5,
+    eliminationStartRound: 5,
+    timeDecreasePerRound: 3
+  },
+  5: {
+    totalRounds: 9,
+    baseTimeRounds: 5,
+    timeDecreaseStartRound: 6,
+    eliminationStartRound: 6,
+    timeDecreasePerRound: 3
+  },
+  6: {
+    totalRounds: 10,
+    baseTimeRounds: 6, // Rounds 1-6 have 60 seconds
+    timeDecreaseStartRound: 7,
+    eliminationStartRound: 7,
+    timeDecreasePerRound: 3
+  }
+} as const;
+
+export function getMultiplayerConfig(playerCount: number) {
+  if (playerCount <= 4) return MULTIPLAYER_CONFIG[4];
+  if (playerCount === 5) return MULTIPLAYER_CONFIG[5];
+  return MULTIPLAYER_CONFIG[6];
+}
+
+export function getRoundTime(round: number, playerCount: number): number {
+  const config = getMultiplayerConfig(playerCount);
+  if (round <= config.baseTimeRounds) return BASE_TIME;
+  const decreaseRounds = round - config.baseTimeRounds;
+  return Math.max(30, BASE_TIME - (decreaseRounds * config.timeDecreasePerRound));
+}
+
 // Multiplayer types
 export interface MultiplayerPlayer {
   id: string;
   name: string;
-  score: number;
+  score: number; // Round score
+  totalScore: number; // Cumulative score across all rounds
   cardsRemaining: number;
   isReady: boolean;
   isHost: boolean;
   finished: boolean;
+  isEliminated: boolean;
+  eliminatedInRound: number | null;
 }
 
 export interface MultiplayerRoom {
   code: string;
   players: MultiplayerPlayer[];
   gameSeed: number | null;
-  status: 'waiting' | 'playing' | 'finished';
+  status: 'waiting' | 'playing' | 'round_end' | 'finished';
   maxPlayers: number;
   createdAt: number;
+  currentRound: number;
+  totalRounds: number;
+  roundTimeLimit: number;
 }
 
 export interface MultiplayerGameState extends GameState {
   roomCode: string;
   playerId: string;
   opponents: MultiplayerPlayer[];
+  currentRound: number;
+  totalRounds: number;
+  isSpectating: boolean;
+  spectatingPlayerId: string | null;
 }
 
 // WebSocket message types
@@ -175,9 +223,14 @@ export type WSMessageType =
   | 'leave_room'
   | 'set_ready'
   | 'start_game'
+  | 'start_round'
   | 'game_update'
+  | 'round_end'
+  | 'player_eliminated'
   | 'player_finished'
   | 'room_update'
+  | 'spectate_player'
+  | 'spectator_update'
   | 'error';
 
 export interface WSMessage {

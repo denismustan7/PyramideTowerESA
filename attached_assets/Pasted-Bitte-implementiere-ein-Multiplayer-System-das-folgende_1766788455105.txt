@@ -1,0 +1,29 @@
+Bitte implementiere ein Multiplayer-System, das folgende Regeln für 4 bis 6 Spieler strikt umsetzt:
+1. Runden-Struktur & Zeit-Logik
+Das Spiel passt sich automatisch der Spieleranzahl beim Start an:
+• Bei 4 Spielern: * Insgesamt 8 Runden.
+• Runden 1 bis 4: Jeweils 60 Sekunden.
+• Ab Runde 5: Die Zeit verringert sich pro Runde um 3 Sekunden.
+• Bei 6 Spielern:
+• Insgesamt 10 Runden.
+• Runden 1 bis 6: Jeweils 60 Sekunden.
+• Ab Runde 7: Die Zeit verringert sich pro Runde um 3 Sekunden.
+2. Dynamische Ausscheidungs-Regel (Elimination)
+• Kumulative Punkte: Die Punkte werden nach jeder Runde addiert und nicht zurückgesetzt.
+• Eliminierung (4 Spieler Modus): Am Ende von Runde 5 scheidet der Spieler mit der niedrigsten Gesamtpunktzahl aus. In jeder darauffolgenden Runde scheidet erneut der jeweils Punktniedrigste aus.
+• Eliminierung (6 Spieler Modus): Am Ende von Runde 7 scheidet der punktniedrigste Spieler aus. In jeder darauffolgenden Runde scheidet der nächste Spieler mit den wenigsten Punkten aus.
+• Der Gewinner: Der Spieler mit den höchsten Punkten darf als einziger alle Runden (8 bzw. 10) zu Ende spielen.
+3. Live-Punktetabelle (UI)
+• Erstelle oben rechts eine kleine, kompakte Live-Tabelle.
+• Diese Tabelle muss die aktuellen Punkte aller Spieler in Echtzeit synchronisieren und anzeigen.
+• Status-Anzeige: Sobald ein Spieler ausgeschieden ist, muss sein Name in der Tabelle rot markiert werden.
+4. Runden-Übergang & Bereit-System
+• Nach jeder beendeten Runde erscheint für alle Spieler eine Übersicht mit den aktuellen Punkteständen aller Teilnehmer.
+• Ready-Check: Die nächste Runde startet erst, wenn alle noch aktiven Spieler auf einen "Bereit"-Button geklickt haben.
+5. Zuschauer-Modus (Spectator Mode)
+• Ausgeschiedene Spieler werden nicht aus dem Raum geworfen.
+• Sie können den verbleibenden Spielern live zuschauen.
+• Implementiere eine Switch-Funktion, mit der Zuschauer zwischen den Ansichten der noch aktiven Spieler hin- und herwechseln können.
+6. Technische Synchronisation
+• Alle Spieler müssen denselben Karten-Seed nutzen, damit die Pyramiden und die Zufallskarten in den Slots für alle identisch sind.
+• Nutze WebSockets, um die Punkteaktualisierungen und den "Bereit"-Status verzögerungsfrei an alle Clients zu senden.
