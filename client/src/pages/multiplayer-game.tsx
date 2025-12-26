@@ -15,7 +15,8 @@ import {
   isCardPlayable,
   applyInvalidMovePenalty,
   getDiscardTop,
-  getRank
+  getRank,
+  hasValidMoves
 } from "@/lib/gameEngine";
 import { INVALID_MOVE_PENALTY } from "@shared/schema";
 import type { GameState } from "@shared/schema";
@@ -118,6 +119,8 @@ export default function MultiplayerGamePage() {
   const [spectatingPlayerName, setSpectatingPlayerName] = useState<string | null>(null);
   
   const [currentSeed, setCurrentSeed] = useState(initialSeed);
+  const [hasFinishedRound, setHasFinishedRound] = useState(false);
+  const [canSpectateWhileWaiting, setCanSpectateWhileWaiting] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -164,28 +167,6 @@ export default function MultiplayerGamePage() {
     // Only run on mount - subsequent rounds are handled by round_started message
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (gameState?.phase === 'playing' && !isEliminated) {
-      timerRef.current = setInterval(() => {
-        setGameState(prev => {
-          if (!prev) return prev;
-          const newState = tickTimer(prev);
-          if (newState.phase !== 'playing' && newState.phase !== prev.phase) {
-            clearInterval(timerRef.current!);
-            sendRoundFinished(newState);
-          }
-          return newState;
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [gameState?.phase, isEliminated]);
 
   const handleWSMessage = (message: { type: string; payload?: any }) => {
     switch (message.type) {
@@ -254,6 +235,11 @@ export default function MultiplayerGamePage() {
         setRoundTimeLimit(message.payload.roundTimeLimit);
         setIsReady(false);
         setReadyPlayers([]);
+        setHasFinishedRound(false);
+        setCanSpectateWhileWaiting(false);
+        setIsSpectating(false);
+        setSpectatingPlayerId(null);
+        setSpectatingPlayerName(null);
         
         if (message.payload.isEliminated) {
           setIsEliminated(true);
@@ -316,18 +302,63 @@ export default function MultiplayerGamePage() {
     }
   }, [playerId, roomCode, isEliminated]);
 
-  const sendRoundFinished = useCallback((state: GameState) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
+  const sendRoundFinished = useCallback((state: GameState, finishReason: 'won' | 'time' | 'no_moves') => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated && !hasFinishedRound) {
+      setHasFinishedRound(true);
+      setCanSpectateWhileWaiting(true);
+      
       wsRef.current.send(JSON.stringify({
         type: 'round_finished',
         payload: {
           playerId,
           roomCode,
-          score: state.score
+          score: state.score,
+          finishReason
         }
       }));
+      
+      // Show toast based on finish reason
+      if (finishReason === 'won') {
+        toast({
+          title: "Alle Karten abgeräumt!",
+          description: "Warte auf andere Spieler..."
+        });
+      } else if (finishReason === 'no_moves') {
+        toast({
+          title: "Keine Züge mehr möglich",
+          description: "Warte auf andere Spieler..."
+        });
+      } else {
+        toast({
+          title: "Zeit abgelaufen!",
+          description: "Warte auf andere Spieler..."
+        });
+      }
     }
-  }, [playerId, roomCode, isEliminated]);
+  }, [playerId, roomCode, isEliminated, hasFinishedRound, toast]);
+
+  // Timer effect - must be after sendRoundFinished is defined
+  useEffect(() => {
+    if (gameState?.phase === 'playing' && !isEliminated && !hasFinishedRound) {
+      timerRef.current = setInterval(() => {
+        setGameState(prev => {
+          if (!prev) return prev;
+          const newState = tickTimer(prev);
+          if (newState.phase !== 'playing' && newState.phase !== prev.phase) {
+            clearInterval(timerRef.current!);
+            sendRoundFinished(newState, 'time');
+          }
+          return newState;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [gameState?.phase, isEliminated, hasFinishedRound, sendRoundFinished]);
 
   const handleReadyForNextRound = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
@@ -340,16 +371,21 @@ export default function MultiplayerGamePage() {
   }, [playerId, roomCode, isEliminated]);
 
   const handleSpectatePlayer = useCallback((targetPlayerId: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isEliminated) {
+    // Allow spectating if eliminated OR if finished round but waiting for others
+    if (wsRef.current?.readyState === WebSocket.OPEN && (isEliminated || canSpectateWhileWaiting)) {
       wsRef.current.send(JSON.stringify({
         type: 'spectate_player',
         payload: { targetPlayerId }
       }));
+      setIsSpectating(true);
+      setSpectatingPlayerId(targetPlayerId);
+      const targetPlayer = players.find(p => p.id === targetPlayerId);
+      setSpectatingPlayerName(targetPlayer?.name || null);
     }
-  }, [isEliminated]);
+  }, [isEliminated, canSpectateWhileWaiting, players]);
 
   const handleCardClick = useCallback((cardId: string) => {
-    if (!gameState || gameState.phase !== 'playing' || isEliminated) return;
+    if (!gameState || gameState.phase !== 'playing' || isEliminated || hasFinishedRound) return;
 
     const cardIsPlayable = isCardPlayable(gameState, cardId);
     if (!cardIsPlayable) return;
@@ -382,8 +418,13 @@ export default function MultiplayerGamePage() {
         }
         sendGameUpdate(newState);
         
+        // Check if won (all cards cleared)
         if (newState.phase === 'won') {
-          sendRoundFinished(newState);
+          sendRoundFinished(newState, 'won');
+        }
+        // Check if no valid moves left
+        else if (!hasValidMoves(newState)) {
+          sendRoundFinished(newState, 'no_moves');
         }
         
         return newState;
@@ -404,17 +445,22 @@ export default function MultiplayerGamePage() {
       setShakeCardId(null);
       setShowPenalty(false);
     }, 800);
-  }, [gameState, sendGameUpdate, sendRoundFinished, isEliminated]);
+  }, [gameState, sendGameUpdate, sendRoundFinished, isEliminated, hasFinishedRound]);
 
   const handleDraw = useCallback(() => {
-    if (!gameState || gameState.phase !== 'playing' || isEliminated) return;
+    if (!gameState || gameState.phase !== 'playing' || isEliminated || hasFinishedRound) return;
     
     if (gameState.drawPile.length === 0) {
-      toast({
-        title: "Stapel leer",
-        description: "Keine Karten mehr zum Ziehen!",
-        variant: "destructive"
-      });
+      // Check if there are any valid moves without drawing
+      if (!hasValidMoves(gameState)) {
+        sendRoundFinished(gameState, 'no_moves');
+      } else {
+        toast({
+          title: "Stapel leer",
+          description: "Keine Karten mehr zum Ziehen!",
+          variant: "destructive"
+        });
+      }
       return;
     }
 
@@ -422,18 +468,34 @@ export default function MultiplayerGamePage() {
       if (!prev) return prev;
       const newState = drawCard(prev);
       sendGameUpdate(newState);
+      
+      // After drawing, check if still no valid moves
+      if (!hasValidMoves(newState)) {
+        sendRoundFinished(newState, 'no_moves');
+      }
+      
       return newState;
     });
-  }, [gameState, toast, sendGameUpdate, isEliminated]);
+  }, [gameState, toast, sendGameUpdate, sendRoundFinished, isEliminated, hasFinishedRound]);
 
   const handlePlayOnBonusSlot = useCallback((slotNumber: 1 | 2) => {
-    if (!gameState || gameState.phase !== 'playing' || !selectedCardId || isEliminated) return;
+    if (!gameState || gameState.phase !== 'playing' || !selectedCardId || isEliminated || hasFinishedRound) return;
 
     if (canPlayOnBonusSlot(gameState, selectedCardId, slotNumber)) {
       setGameState(prev => {
         if (!prev) return prev;
         const newState = playCardOnBonusSlot(prev, selectedCardId, slotNumber);
         sendGameUpdate(newState);
+        
+        // Check if won (all cards cleared)
+        if (newState.phase === 'won') {
+          sendRoundFinished(newState, 'won');
+        }
+        // Check if no valid moves left
+        else if (!hasValidMoves(newState)) {
+          sendRoundFinished(newState, 'no_moves');
+        }
+        
         return newState;
       });
       setSelectedCardId(null);
@@ -441,7 +503,7 @@ export default function MultiplayerGamePage() {
       setShakeCardId(selectedCardId);
       setTimeout(() => setShakeCardId(null), 300);
     }
-  }, [gameState, selectedCardId, sendGameUpdate, isEliminated]);
+  }, [gameState, selectedCardId, sendGameUpdate, sendRoundFinished, isEliminated, hasFinishedRound]);
 
   const handleGoHome = () => {
     if (wsRef.current) {
@@ -472,12 +534,13 @@ export default function MultiplayerGamePage() {
     >
       <MagicalParticles />
 
-      {isSpectating && (
+      {(isSpectating || canSpectateWhileWaiting) && (
         <SpectatorBar
-          activePlayers={activePlayers}
+          activePlayers={activePlayers.filter(p => !p.finished)}
           spectatingPlayerId={spectatingPlayerId}
           spectatingPlayerName={spectatingPlayerName}
           onSwitchPlayer={handleSpectatePlayer}
+          isWaitingMode={hasFinishedRound && !isEliminated}
         />
       )}
 
@@ -559,8 +622,44 @@ export default function MultiplayerGamePage() {
         maxTime={roundTimeLimit}
         onDraw={handleDraw}
         onPlayOnSlot={handlePlayOnBonusSlot}
-        disabled={gameState.phase !== 'playing' || isEliminated}
+        disabled={gameState.phase !== 'playing' || isEliminated || hasFinishedRound}
       />
+
+      {/* Waiting overlay for players who finished but waiting for others */}
+      <AnimatePresence>
+        {hasFinishedRound && !isEliminated && !showRoundEnd && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none"
+            style={{ background: 'rgba(0, 8, 20, 0.7)' }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-center p-6 rounded-lg pointer-events-auto"
+              style={{ 
+                background: 'linear-gradient(to bottom, rgba(0, 20, 40, 0.95), rgba(0, 8, 20, 0.95))',
+                border: '1px solid rgba(34, 211, 238, 0.3)'
+              }}
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="w-12 h-12 mx-auto mb-4 border-2 border-cyan-500 border-t-transparent rounded-full"
+              />
+              <h3 className="text-lg font-semibold text-cyan-300 mb-2">Warte auf Mitspieler...</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Deine Punkte: <span className="text-amber-300 font-bold">{gameState.score}</span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Du kannst die Ansicht anderer Spieler beobachten
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showRoundEnd && roundEndData && (

@@ -388,12 +388,23 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const room = rooms.get(currentRoomCode);
           if (room) {
             const player = room.players.get(currentPlayerId);
-            if (player && !player.isEliminated) {
-              const { score } = message.payload;
+            if (player && !player.isEliminated && !player.finished) {
+              const { score, finishReason } = message.payload;
               player.score = score;
               player.totalScore += score;
               player.finished = true;
               player.isReady = false;
+
+              // Broadcast that this player has finished to all other players
+              broadcastToRoom(room, {
+                type: 'player_finished',
+                payload: {
+                  playerId: player.id,
+                  playerName: player.name,
+                  score: player.score,
+                  finishReason: finishReason || 'unknown'
+                }
+              }, currentPlayerId);
 
               // Check if all active players have finished the round
               const activePlayers = getActivePlayers(room);

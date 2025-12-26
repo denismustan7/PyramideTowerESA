@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Skull, Crown, ChevronUp, ChevronDown } from "lucide-react";
+import { Trophy, Skull, Crown, ChevronUp, ChevronDown, CheckCircle, Clock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface Player {
@@ -167,6 +167,27 @@ export function LiveScoreboard({ players, currentPlayerId, currentRound, totalRo
                       transition={{ type: "spring", stiffness: 500, damping: 20 }}
                     >
                       <Crown className="w-3 h-3 flex-shrink-0" style={{ color: '#D4AF37' }} />
+                    </motion.div>
+                  )}
+                  {player.finished && !player.isEliminated && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                      className="flex items-center"
+                      title="Fertig - wartet auf andere"
+                    >
+                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                    </motion.div>
+                  )}
+                  {!player.finished && !player.isEliminated && (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="flex items-center"
+                      title="Spielt noch"
+                    >
+                      <Clock className="w-3 h-3 text-cyan-400/50 flex-shrink-0" />
                     </motion.div>
                   )}
                 </div>
