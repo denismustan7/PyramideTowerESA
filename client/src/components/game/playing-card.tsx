@@ -18,30 +18,86 @@ const suitSymbols: Record<Suit, string> = {
   spades: '\u2660',
 };
 
-const suitColors: Record<Suit, string> = {
-  hearts: 'text-red-600',
-  diamonds: 'text-red-600',
-  clubs: 'text-gray-900',
-  spades: 'text-gray-900',
+const suitColors: Record<Suit, { text: string; fill: string }> = {
+  hearts: { text: '#dc2626', fill: '#dc2626' },
+  diamonds: { text: '#dc2626', fill: '#dc2626' },
+  clubs: { text: '#1f2937', fill: '#1f2937' },
+  spades: { text: '#1f2937', fill: '#1f2937' },
 };
 
 const sizeClasses = {
   sm: 'w-10 h-14',
-  md: 'w-12 h-16',
-  lg: 'w-14 h-20',
+  md: 'w-12 h-16 sm:w-14 sm:h-20',
+  lg: 'w-14 h-20 sm:w-16 sm:h-24',
 };
 
-const valueSizes = {
+const cornerSizes = {
+  sm: { rank: 'text-[10px]', suit: 'text-[8px]' },
+  md: { rank: 'text-xs sm:text-sm', suit: 'text-[10px] sm:text-xs' },
+  lg: { rank: 'text-sm sm:text-base', suit: 'text-xs sm:text-sm' },
+};
+
+const centerSuitSizes = {
   sm: 'text-lg',
-  md: 'text-2xl',
-  lg: 'text-4xl',
+  md: 'text-xl sm:text-2xl',
+  lg: 'text-2xl sm:text-3xl',
 };
 
-const suitSizes = {
-  sm: 'text-xs',
-  md: 'text-base',
-  lg: 'text-xl',
-};
+function CardBack({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  return (
+    <div 
+      className={cn(
+        sizeClasses[size],
+        "rounded-lg relative overflow-hidden"
+      )}
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid #d1d5db',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      }}
+    >
+      <div 
+        className="absolute inset-[3px] rounded-md overflow-hidden"
+        style={{
+          background: '#dc2626',
+        }}
+      >
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 3px,
+                rgba(255,255,255,0.15) 3px,
+                rgba(255,255,255,0.15) 4px
+              ),
+              repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 3px,
+                rgba(255,255,255,0.15) 3px,
+                rgba(255,255,255,0.15) 4px
+              )
+            `
+          }}
+        />
+        <div 
+          className="absolute inset-1 rounded-sm"
+          style={{ border: '1px solid rgba(255,255,255,0.3)' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function getFaceCardArt(value: string): string {
+  if (value === 'K') return 'K';
+  if (value === 'Q') return 'Q';
+  if (value === 'J') return 'J';
+  return '';
+}
 
 export function PlayingCard({ 
   card, 
@@ -53,70 +109,28 @@ export function PlayingCard({
 }: PlayingCardProps) {
   
   if (!card.isFaceUp) {
-    return (
-      <motion.div
-        className={cn(
-          sizeClasses[size],
-          "rounded-md relative overflow-hidden"
-        )}
-        style={{
-          background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 25%, #1e3a5f 50%, #2c5282 75%, #1e3a5f 100%)',
-          border: '2px solid #D4AF37',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.3)'
-        }}
-        initial={{ rotateY: 180 }}
-        animate={{ rotateY: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {/* Diamond pattern overlay */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-              repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(212, 175, 55, 0.15) 4px, rgba(212, 175, 55, 0.15) 5px),
-              repeating-linear-gradient(-45deg, transparent, transparent 4px, rgba(212, 175, 55, 0.15) 4px, rgba(212, 175, 55, 0.15) 5px)
-            `
-          }}
-        />
-        {/* Inner border frame */}
-        <div 
-          className="absolute inset-1 rounded-sm" 
-          style={{ border: '1px solid rgba(212, 175, 55, 0.5)' }}
-        />
-        {/* Center star symbol */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className={cn(size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-5 h-5' : 'w-6 h-6')} style={{ color: '#D4AF37' }}>
-            <path 
-              fill="currentColor" 
-              d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
-            />
-          </svg>
-        </div>
-        {/* Bottom glow */}
-        <div 
-          className="absolute inset-0" 
-          style={{ background: 'linear-gradient(to top, rgba(212, 175, 55, 0.15), transparent 50%)' }}
-        />
-      </motion.div>
-    );
+    return <CardBack size={size} />;
   }
+
+  const colors = suitColors[card.suit];
+  const isFaceCard = ['K', 'Q', 'J'].includes(card.value);
+  const isAce = card.value === 'A';
 
   return (
     <motion.button
       className={cn(
         sizeClasses[size],
-        "rounded-lg flex flex-col items-center justify-center relative overflow-hidden",
+        "rounded-lg flex flex-col relative overflow-hidden",
         "transition-all duration-150",
         isPlayable && !isCovered ? "cursor-pointer" : "cursor-default",
-        isCovered && "brightness-40 saturate-50",
+        isCovered && "brightness-75",
       )}
       style={{
-        background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F0 50%, #E8E4D9 100%)',
-        border: '3px solid',
-        borderColor: '#D4AF37',
+        background: '#FFFFFF',
+        border: '1px solid #d1d5db',
         boxShadow: isCovered 
-          ? '0 2px 6px rgba(0,0,0,0.4)' 
-          : '0 4px 12px rgba(0,0,0,0.5), 0 0 20px rgba(212, 175, 55, 0.2)',
+          ? '0 1px 2px rgba(0,0,0,0.1)' 
+          : '0 2px 8px rgba(0,0,0,0.15)',
       }}
       onClick={isPlayable && !isCovered ? onClick : undefined}
       animate={isShaking ? {
@@ -124,43 +138,103 @@ export function PlayingCard({
         transition: { duration: 0.3 }
       } : {}}
       whileHover={isPlayable && !isCovered ? { 
-        scale: 1.1, 
-        y: -8,
-        boxShadow: '0 8px 20px rgba(0,0,0,0.6), 0 0 30px rgba(212, 175, 55, 0.4)'
+        scale: 1.08, 
+        y: -4,
+        boxShadow: '0 6px 16px rgba(0,0,0,0.2)'
       } : {}}
       whileTap={isPlayable && !isCovered ? { scale: 0.95 } : {}}
       data-testid={`card-${card.id}`}
     >
-      <div 
-        className="absolute inset-0.5 rounded pointer-events-none"
-        style={{ 
-          border: '1px solid rgba(212, 175, 55, 0.3)',
-        }}
-      />
-      
-      <span 
-        className={cn(
-          "font-black leading-none tracking-tight",
-          valueSizes[size],
-          suitColors[card.suit]
+      {/* Top-left corner */}
+      <div className="absolute top-0.5 left-1 flex flex-col items-center leading-none">
+        <span 
+          className={cn("font-bold", cornerSizes[size].rank)}
+          style={{ color: colors.text }}
+        >
+          {card.value}
+        </span>
+        <span 
+          className={cornerSizes[size].suit}
+          style={{ color: colors.text }}
+        >
+          {suitSymbols[card.suit]}
+        </span>
+      </div>
+
+      {/* Bottom-right corner (inverted) */}
+      <div className="absolute bottom-0.5 right-1 flex flex-col items-center leading-none rotate-180">
+        <span 
+          className={cn("font-bold", cornerSizes[size].rank)}
+          style={{ color: colors.text }}
+        >
+          {card.value}
+        </span>
+        <span 
+          className={cornerSizes[size].suit}
+          style={{ color: colors.text }}
+        >
+          {suitSymbols[card.suit]}
+        </span>
+      </div>
+
+      {/* Center content */}
+      <div className="flex-1 flex items-center justify-center">
+        {isAce ? (
+          <span 
+            className={cn("font-normal", centerSuitSizes[size])}
+            style={{ color: colors.text }}
+          >
+            {suitSymbols[card.suit]}
+          </span>
+        ) : isFaceCard ? (
+          <div 
+            className="flex items-center justify-center"
+            style={{ color: colors.text }}
+          >
+            <svg 
+              viewBox="0 0 40 60" 
+              className={cn(
+                size === 'sm' ? 'w-6 h-9' : size === 'md' ? 'w-7 h-10 sm:w-8 sm:h-12' : 'w-9 h-14 sm:w-10 sm:h-16'
+              )}
+            >
+              {card.value === 'K' && (
+                <>
+                  <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <rect x="17" y="10" width="6" height="3" fill="currentColor"/>
+                  <path d="M12 20 L28 20 L26 35 L20 32 L14 35 Z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <line x1="20" y1="35" x2="20" y2="50" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="14" y1="50" x2="26" y2="50" stroke="currentColor" strokeWidth="2"/>
+                  <line x1="8" y1="25" x2="32" y2="25" stroke="currentColor" strokeWidth="1.5"/>
+                </>
+              )}
+              {card.value === 'Q' && (
+                <>
+                  <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M15 8 L20 5 L25 8" fill="none" stroke="currentColor" strokeWidth="1"/>
+                  <path d="M12 20 L28 20 L26 40 L14 40 Z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <ellipse cx="20" cy="48" rx="8" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                </>
+              )}
+              {card.value === 'J' && (
+                <>
+                  <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <rect x="16" y="7" width="8" height="4" fill="currentColor"/>
+                  <path d="M14 20 L26 20 L26 35 L14 35 Z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                  <line x1="20" y1="35" x2="20" y2="48" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M15 48 L20 52 L25 48" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                </>
+              )}
+            </svg>
+          </div>
+        ) : (
+          <span 
+            className={cn("font-normal", centerSuitSizes[size])}
+            style={{ color: colors.text }}
+          >
+            {suitSymbols[card.suit]}
+          </span>
         )}
-        style={{
-          textShadow: card.suit === 'hearts' || card.suit === 'diamonds' 
-            ? '1px 1px 0 rgba(180, 0, 0, 0.3)' 
-            : '1px 1px 0 rgba(0, 0, 0, 0.2)',
-        }}
-      >
-        {card.value}
-      </span>
-      <span 
-        className={cn(
-          "leading-none -mt-1",
-          suitSizes[size],
-          suitColors[card.suit]
-        )}
-      >
-        {suitSymbols[card.suit]}
-      </span>
+      </div>
     </motion.button>
   );
 }
@@ -177,7 +251,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
   if (!isActive) {
     return (
       <div 
-        className="w-12 h-16 sm:w-14 sm:h-20 rounded-md"
+        className="w-12 h-16 sm:w-14 sm:h-20 rounded-lg"
         style={{
           background: 'rgba(0, 0, 0, 0.4)',
           border: '2px solid rgba(100, 100, 100, 0.4)',
@@ -198,7 +272,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
           card={card}
           isPlayable={false}
           isCovered={false}
-          size="lg"
+          size="md"
         />
       </motion.div>
     );
@@ -206,7 +280,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
 
   return (
     <motion.div 
-      className="w-12 h-16 sm:w-14 sm:h-20 rounded-md"
+      className="w-12 h-16 sm:w-14 sm:h-20 rounded-lg"
       style={{
         background: 'rgba(212, 175, 55, 0.1)',
         border: '2px dashed #D4AF37',
