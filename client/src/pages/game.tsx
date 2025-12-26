@@ -119,9 +119,6 @@ export default function GamePage() {
     // If card is not playable (locked/dimmed), ignore click - no penalty
     if (!cardIsPlayable) return;
 
-    // Debug: Log current slot state before any action
-    console.log(`[CLICK] Card clicked. Current slots - Slot1: ${gameState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${gameState.bonusSlot2.card?.value ?? 'null'}`);
-
     // Auto-placement: Find all valid slots and pick randomly if multiple fit
     type SlotOption = 'main' | 'slot1' | 'slot2';
     const validSlots: SlotOption[] = [];
@@ -136,12 +133,9 @@ export default function GamePage() {
       validSlots.push('slot2');
     }
     
-    console.log(`[CLICK] Valid slots: ${validSlots.join(', ')}`);
-    
     if (validSlots.length > 0) {
       // Randomly select a slot if multiple options exist
       const selectedSlot = validSlots[Math.floor(Math.random() * validSlots.length)];
-      console.log(`[CLICK] Selected slot: ${selectedSlot}`);
       
       if (selectedSlot === 'main') {
         setGameState(prev => playCard(prev, cardId));

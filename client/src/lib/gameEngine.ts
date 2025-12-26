@@ -291,9 +291,6 @@ export function canPlay(gameState: GameState, cardId: string): boolean {
 
 // Play a card from the pyramid
 export function playCard(gameState: GameState, cardId: string): GameState {
-  console.log(`[MAIN] === playCard called ===`);
-  console.log(`[MAIN] Input - Discard top: ${gameState.discardPile.length > 0 ? gameState.discardPile[gameState.discardPile.length-1].value : 'empty'}, Slot1: ${gameState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${gameState.bonusSlot2.card?.value ?? 'null'}`);
-  
   if (!canPlay(gameState, cardId)) {
     return gameState; // Invalid move
   }
@@ -311,7 +308,6 @@ export function playCard(gameState: GameState, cardId: string): GameState {
   
   if (!foundCard || foundIndex === -1) return gameState;
   
-  console.log(`[MAIN] Playing card value: ${foundCard.value} to main discard`);
   
   // Create played card copy
   const playedCard: Card = { ...foundCard, isFaceUp: true };
@@ -347,7 +343,6 @@ export function playCard(gameState: GameState, cardId: string): GameState {
     } : null
   };
   
-  console.log(`[MAIN] After freeze - Slot1: ${frozenSlot1.card?.value ?? 'null'}, Slot2: ${frozenSlot2.card?.value ?? 'null'}`);
   
   // Update combo
   const newCombo = gameState.combo + 1;
@@ -399,7 +394,6 @@ export function playCard(gameState: GameState, cardId: string): GameState {
     newState.bonusSlot2ActivationCount++;
   }
   
-  console.log(`[MAIN] FINAL OUTPUT - Discard top: ${newState.discardPile[newState.discardPile.length-1].value}, Slot1: ${newState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${newState.bonusSlot2.card?.value ?? 'null'}`);
   return newState;
 }
 
@@ -471,11 +465,7 @@ export function canPlayOnBonusSlot(gameState: GameState, cardId: string, slotNum
 
 // Play a card onto a bonus slot
 export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNumber: 1 | 2): GameState {
-  console.log(`[BONUS] === playCardOnBonusSlot called for slot ${slotNumber} ===`);
-  console.log(`[BONUS] Input state - Slot1: ${gameState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${gameState.bonusSlot2.card?.value ?? 'null'}`);
-  
   if (!canPlayOnBonusSlot(gameState, cardId, slotNumber)) {
-    console.log(`[BONUS] canPlayOnBonusSlot returned false, returning unchanged`);
     return gameState;
   }
   
@@ -491,11 +481,8 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   }
   
   if (!foundCard || foundIndex === -1) {
-    console.log(`[BONUS] Card not found in pyramid, returning unchanged`);
     return gameState;
   }
-  
-  console.log(`[BONUS] Playing card value: ${foundCard.value} on slot ${slotNumber}`);
   
   // Create played card copy
   const playedCard: Card = { ...foundCard, isFaceUp: true };
@@ -531,8 +518,6 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
           isPlayable: gameState.bonusSlot2.card.isPlayable
         } : null
       };  // Keep slot 2 frozen
-  
-  console.log(`[BONUS] After preservation - Slot1: ${preservedSlot1.card?.value ?? 'null'}, Slot2: ${preservedSlot2.card?.value ?? 'null'}`)
   
   // Keep discard pile unchanged - old bonus slot card just disappears
   const newDiscardPile = [...gameState.discardPile];
@@ -587,7 +572,6 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
     newState.bonusSlot2ActivationCount++;
   }
   
-  console.log(`[BONUS] FINAL OUTPUT - Slot1: ${newState.bonusSlot1.card?.value ?? 'null'}, Slot2: ${newState.bonusSlot2.card?.value ?? 'null'}`);
   return newState;
 }
 
