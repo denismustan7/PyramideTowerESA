@@ -35,6 +35,7 @@ interface PlayerState {
   finished: boolean;
   isEliminated: boolean;
   isReady?: boolean;
+  eliminatedInRound?: number | null;
 }
 
 function MagicalParticles() {
@@ -122,14 +123,15 @@ export default function MultiplayerGamePage() {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    if (!currentSeed) {
+    if (!initialSeed) {
       setLocation('/lobby');
       return;
     }
 
-    const initialState = initGameWithSeed(1, currentSeed);
-    initialState.totalTime = roundTimeLimit;
-    initialState.timeRemaining = roundTimeLimit;
+    // Initialize game with seed from URL (first round only)
+    const initialState = initGameWithSeed(1, initialSeed);
+    initialState.totalTime = initialRoundTime;
+    initialState.timeRemaining = initialRoundTime;
     setGameState(initialState);
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -159,7 +161,9 @@ export default function MultiplayerGamePage() {
         socket.close();
       }
     };
-  }, [currentSeed, roomCode, playerId, setLocation, roundTimeLimit]);
+    // Only run on mount - subsequent rounds are handled by round_started message
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (gameState?.phase === 'playing' && !isEliminated) {
@@ -248,15 +252,19 @@ export default function MultiplayerGamePage() {
         setCurrentRound(message.payload.currentRound);
         setTotalRounds(message.payload.totalRounds);
         setRoundTimeLimit(message.payload.roundTimeLimit);
-        setCurrentSeed(message.payload.seed);
         setIsReady(false);
         setReadyPlayers([]);
         
         if (message.payload.isEliminated) {
           setIsEliminated(true);
           setIsSpectating(true);
+          // Use the new seed even for spectators
+          setCurrentSeed(message.payload.seed);
         } else {
-          const newState = initGameWithSeed(1, message.payload.seed);
+          // Initialize new round with new seed from server
+          const newSeed = message.payload.seed;
+          setCurrentSeed(newSeed);
+          const newState = initGameWithSeed(1, newSeed);
           newState.totalTime = message.payload.roundTimeLimit;
           newState.timeRemaining = message.payload.roundTimeLimit;
           setGameState(newState);

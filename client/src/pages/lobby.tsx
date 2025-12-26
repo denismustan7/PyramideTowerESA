@@ -118,7 +118,7 @@ export default function LobbyPage() {
         setRoom(message.payload.room);
         break;
       case 'game_started':
-        setLocation(`/multiplayer-game?room=${message.payload.roomCode}&player=${message.payload.playerId}&seed=${message.payload.seed}`);
+        setLocation(`/multiplayer-game?room=${message.payload.roomCode}&player=${message.payload.playerId}&seed=${message.payload.seed}&round=${message.payload.currentRound || 1}&totalRounds=${message.payload.totalRounds || 8}&roundTime=${message.payload.roundTimeLimit || 60}`);
         break;
       case 'error':
         toast({

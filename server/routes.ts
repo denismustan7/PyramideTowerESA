@@ -444,7 +444,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                       name: p.name,
                       score: p.score,
                       totalScore: p.totalScore,
-                      isEliminated: p.isEliminated
+                      isEliminated: p.isEliminated,
+                      eliminatedInRound: p.eliminatedInRound
                     }));
 
                   broadcastToRoom(room, {
@@ -453,7 +454,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                       round: room.currentRound,
                       standings,
                       nextRound: room.currentRound + 1,
-                      nextRoundTime: getRoundTime(room.currentRound + 1, room.playerCount)
+                      nextRoundTime: getRoundTime(room.currentRound + 1, room.playerCount),
+                      eliminatedId: eliminatedPlayer?.id || null,
+                      eliminatedName: eliminatedPlayer?.name || null
                     }
                   });
                 }
