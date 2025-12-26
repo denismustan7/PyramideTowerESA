@@ -27,13 +27,13 @@ export interface Card {
   isPlayable: boolean; // Can be clicked (not covered by other cards)
 }
 
-// Pyramid node represents a card position in the tri-peaks structure
+// Pyramid node represents a card position in the brick-pattern pyramid
 export interface PyramidNode {
   card: Card | null; // null if card was removed
-  row: number; // 0-3 (0 = peak)
-  col: number;
-  peakIndex: number; // 0, 1, or 2
-  coveredBy: string[]; // IDs of cards covering this one
+  row: number; // 0 = top (smallest row), higher = bottom (front)
+  col: number; // column position within the row
+  coveredBy: string[]; // IDs of cards covering this one (cards in lower row indices that overlap)
+  isSecondRow: boolean; // If true, this row is the "second row" (face up but darkened)
 }
 
 // Bonus slot state
@@ -44,7 +44,8 @@ export interface BonusSlotState {
 
 // Game state
 export interface GameState {
-  pyramids: PyramidNode[][]; // Three pyramids
+  pyramid: PyramidNode[]; // Single brick-pattern pyramid (flattened array)
+  pyramids: PyramidNode[][]; // Deprecated - kept for compatibility
   drawPile: Card[]; // Face-down draw pile
   discardPile: Card[]; // Face-up discard pile (top is current)
   bonusSlot1: BonusSlotState; // Unlocked at 4 combo
@@ -116,9 +117,11 @@ export function canPlayCard(cardValue: CardValue, discardTopValue: CardValue): b
   return false;
 }
 
-// Game constants
-export const CARDS_PER_PYRAMID = 10; // Standard tri-peaks: 10 cards per peak
-export const TOTAL_PYRAMID_CARDS = 28; // 3 peaks share some base cards
+// Game constants - Brick pyramid structure
+// Rows from top to bottom (back to front): 5, 6, 7, 8, 9, 10 = 45 cards total
+// Row 0 = back/top (5 cards), Row 5 = front/bottom (10 cards)
+export const PYRAMID_ROWS = [5, 6, 7, 8, 9, 10]; // Cards per row from back (top) to front (bottom)
+export const TOTAL_PYRAMID_CARDS = 45; // Total cards on the pyramid
 export const BASE_POINTS = 100;
 export const TOWER_BONUS = 500;
 export const PERFECT_BONUS = 5000;

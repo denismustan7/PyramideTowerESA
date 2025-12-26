@@ -19,7 +19,7 @@ import {
   getRank
 } from "@/lib/gameEngine";
 import type { GameState } from "@shared/schema";
-import { PyramidBoard } from "@/components/game/pyramid-board";
+import { BrickPyramid } from "@/components/game/brick-pyramid";
 import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
 import { GameOverOverlay } from "@/components/game/game-over-overlay";
@@ -214,11 +214,11 @@ export default function GamePage() {
         isPaused={isPaused}
       />
 
-      <div className="flex-1 flex items-center justify-center p-2 relative z-10">
-        <PyramidBoard
-          pyramids={gameState.pyramids}
-          discardTopValue={discardTop?.value || null}
+      <div className="flex-1 flex items-center justify-center p-2 relative z-10 overflow-hidden">
+        <BrickPyramid
+          pyramid={gameState.pyramid}
           onCardClick={handleCardClick}
+          selectedCardId={selectedCardId}
           shakeCardId={shakeCardId}
         />
       </div>
