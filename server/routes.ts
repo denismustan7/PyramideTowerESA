@@ -201,7 +201,9 @@ function getRoomState(room: Room) {
 }
 
 function getActivePlayers(room: Room): RoomPlayer[] {
-  return Array.from(room.players.values()).filter(p => !p.isEliminated);
+  return Array.from(room.players.values()).filter(p => 
+    !p.isEliminated && p.ws.readyState === WebSocket.OPEN
+  );
 }
 
 function checkAndEliminatePlayer(room: Room): RoomPlayer | null {
@@ -512,6 +514,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               player.totalScore += score;
               player.finished = true;
               player.isReady = false;
+              
+              console.log(`[Round] Player ${player.name} finished round ${room.currentRound} with score ${score} (reason: ${finishReason})`);
 
               // Broadcast that this player has finished to all other players
               broadcastToRoom(room, {
@@ -526,9 +530,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
               // Check if all active players have finished the round
               const activePlayers = getActivePlayers(room);
+              console.log(`[Round] Active players: ${activePlayers.length}, Finished: ${activePlayers.filter(p => p.finished).map(p => p.name).join(', ')}, Not finished: ${activePlayers.filter(p => !p.finished).map(p => p.name).join(', ')}`);
               const allFinished = activePlayers.every(p => p.finished);
 
               if (allFinished) {
+                console.log(`[Round] All ${activePlayers.length} active players finished! Transitioning to round_end`);
                 // Clear the server-side timer since all finished
                 clearRoundTimer(currentRoomCode);
                 
@@ -683,7 +689,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             const { targetPlayerId } = message.payload;
             const targetPlayer = room.players.get(targetPlayerId);
             
-            if (spectator?.isEliminated && targetPlayer && !targetPlayer.isEliminated) {
+            // Allow spectating if eliminated OR if finished waiting for others
+            const canSpectate = spectator && (spectator.isEliminated || spectator.finished);
+            
+            if (canSpectate && targetPlayer && !targetPlayer.isEliminated && targetPlayer.id !== currentPlayerId) {
+              console.log(`[Spectate] ${spectator.name} is now spectating ${targetPlayer.name}`);
               ws.send(JSON.stringify({
                 type: 'spectator_update',
                 payload: {
@@ -691,7 +701,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                   playerName: targetPlayer.name,
                   score: targetPlayer.score,
                   totalScore: targetPlayer.totalScore,
-                  cardsRemaining: targetPlayer.cardsRemaining
+                  cardsRemaining: targetPlayer.cardsRemaining,
+                  seed: room.gameSeed // Send the seed so they can render the same board
                 }
               }));
             }
