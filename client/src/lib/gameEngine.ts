@@ -299,6 +299,10 @@ export function playCard(gameState: GameState, cardId: string): GameState {
   newState.pyramid = gameState.pyramid.map(node => ({ ...node }));
   newState.discardPile = [...gameState.discardPile];
   
+  // IMPORTANT: Deep copy both bonus slots to prevent mutation
+  newState.bonusSlot1 = { ...gameState.bonusSlot1, card: gameState.bonusSlot1.card ? { ...gameState.bonusSlot1.card } : null };
+  newState.bonusSlot2 = { ...gameState.bonusSlot2, card: gameState.bonusSlot2.card ? { ...gameState.bonusSlot2.card } : null };
+  
   let playedCard: Card | null = null;
   
   // Find and remove the card from pyramid
@@ -434,6 +438,10 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
   
   const newState = { ...gameState };
   newState.pyramid = gameState.pyramid.map(node => ({ ...node }));
+  
+  // IMPORTANT: Deep copy both bonus slots to prevent mutation of unrelated slot
+  newState.bonusSlot1 = { ...gameState.bonusSlot1, card: gameState.bonusSlot1.card ? { ...gameState.bonusSlot1.card } : null };
+  newState.bonusSlot2 = { ...gameState.bonusSlot2, card: gameState.bonusSlot2.card ? { ...gameState.bonusSlot2.card } : null };
   
   let playedCard: Card | null = null;
   
