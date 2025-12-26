@@ -26,19 +26,19 @@ const suitColors: Record<Suit, string> = {
 };
 
 const sizeClasses = {
-  sm: 'w-12 h-16',
-  md: 'w-16 h-22',
-  lg: 'w-20 h-28',
+  sm: 'w-10 h-14',
+  md: 'w-14 h-20',
+  lg: 'w-[4.5rem] h-[6.5rem]',
 };
 
 const valueSizes = {
-  sm: 'text-xl',
-  md: 'text-2xl',
-  lg: 'text-3xl',
+  sm: 'text-2xl',
+  md: 'text-4xl',
+  lg: 'text-5xl',
 };
 
 const suitSizes = {
-  sm: 'text-lg',
+  sm: 'text-base',
   md: 'text-xl',
   lg: 'text-2xl',
 };
@@ -57,26 +57,38 @@ export function PlayingCard({
       <motion.div
         className={cn(
           sizeClasses[size],
-          "rounded-lg bg-gradient-to-br from-[#0B1D3C] to-[#051026]",
-          "border-2 border-amber-500/60",
-          "shadow-lg shadow-black/50",
-          "flex items-center justify-center relative overflow-hidden"
+          "rounded-lg relative overflow-hidden"
         )}
+        style={{
+          background: 'linear-gradient(135deg, #1a3a5c 0%, #0d1f33 50%, #071426 100%)',
+          border: '3px solid',
+          borderImage: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 50%, #D4AF37 100%) 1',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212, 175, 55, 0.3)'
+        }}
         initial={{ rotateY: 180 }}
         animate={{ rotateY: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="absolute inset-1 border border-amber-500/30 rounded-md" />
-        <div className="absolute inset-2 border border-amber-500/20 rounded" />
-        <div className="w-8 h-8 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="w-6 h-6 text-amber-500/70">
+        <div 
+          className="absolute inset-1 rounded" 
+          style={{ border: '1px solid rgba(212, 175, 55, 0.4)' }}
+        />
+        <div 
+          className="absolute inset-2 rounded-sm" 
+          style={{ border: '1px solid rgba(212, 175, 55, 0.2)' }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="w-8 h-8" style={{ color: '#D4AF37' }}>
             <path 
               fill="currentColor" 
               d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
             />
           </svg>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-transparent" />
+        <div 
+          className="absolute inset-0" 
+          style={{ background: 'linear-gradient(to top, rgba(212, 175, 55, 0.1), transparent)' }}
+        />
       </motion.div>
     );
   }
@@ -85,26 +97,139 @@ export function PlayingCard({
     <motion.button
       className={cn(
         sizeClasses[size],
-        "rounded-lg bg-white border-2",
-        "shadow-lg shadow-black/40",
-        "flex flex-col items-center justify-center relative",
+        "rounded-lg flex flex-col items-center justify-center relative overflow-hidden",
         "transition-all duration-150",
-        isPlayable && !isCovered ? "cursor-pointer border-gray-200" : "cursor-default border-gray-300",
-        isCovered && "brightness-50",
-        !card.isPlayable && "opacity-60 brightness-75",
-        suitColors[card.suit]
+        isPlayable && !isCovered ? "cursor-pointer" : "cursor-default",
+        isCovered && "brightness-40 saturate-50",
       )}
+      style={{
+        background: 'linear-gradient(180deg, #FFFFFF 0%, #F5F5F0 50%, #E8E4D9 100%)',
+        border: '3px solid',
+        borderColor: '#D4AF37',
+        boxShadow: isCovered 
+          ? '0 2px 6px rgba(0,0,0,0.4)' 
+          : '0 4px 12px rgba(0,0,0,0.5), 0 0 20px rgba(212, 175, 55, 0.2)',
+      }}
       onClick={isPlayable && !isCovered ? onClick : undefined}
       animate={isShaking ? {
         x: [0, -5, 5, -5, 5, 0],
         transition: { duration: 0.3 }
       } : {}}
-      whileHover={isPlayable && !isCovered ? { scale: 1.08, y: -6 } : {}}
+      whileHover={isPlayable && !isCovered ? { 
+        scale: 1.1, 
+        y: -8,
+        boxShadow: '0 8px 20px rgba(0,0,0,0.6), 0 0 30px rgba(212, 175, 55, 0.4)'
+      } : {}}
       whileTap={isPlayable && !isCovered ? { scale: 0.95 } : {}}
       data-testid={`card-${card.id}`}
     >
-      <span className={cn("font-bold leading-none", valueSizes[size])}>{card.value}</span>
-      <span className={cn("leading-none mt-0.5", suitSizes[size])}>{suitSymbols[card.suit]}</span>
+      <div 
+        className="absolute inset-0.5 rounded pointer-events-none"
+        style={{ 
+          border: '1px solid rgba(212, 175, 55, 0.3)',
+        }}
+      />
+      
+      <span 
+        className={cn(
+          "font-black leading-none tracking-tight",
+          valueSizes[size],
+          suitColors[card.suit]
+        )}
+        style={{
+          textShadow: card.suit === 'hearts' || card.suit === 'diamonds' 
+            ? '1px 1px 0 rgba(180, 0, 0, 0.3)' 
+            : '1px 1px 0 rgba(0, 0, 0, 0.2)',
+        }}
+      >
+        {card.value}
+      </span>
+      <span 
+        className={cn(
+          "leading-none -mt-1",
+          suitSizes[size],
+          suitColors[card.suit]
+        )}
+      >
+        {suitSymbols[card.suit]}
+      </span>
     </motion.button>
+  );
+}
+
+interface BonusSlotProps {
+  card: Card | null;
+  isActive: boolean;
+  slotNumber: 1 | 2;
+  hasSelectedCard?: boolean;
+  onClick?: () => void;
+}
+
+export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick }: BonusSlotProps) {
+  if (!isActive) {
+    return (
+      <div 
+        className="w-14 h-20 rounded-lg flex items-center justify-center"
+        style={{
+          background: 'rgba(0, 0, 0, 0.3)',
+          border: '2px dashed rgba(100, 100, 100, 0.3)',
+        }}
+      >
+        <span className="text-gray-600 text-xs font-medium">
+          {slotNumber === 1 ? '4x' : '7x'}
+        </span>
+      </div>
+    );
+  }
+
+  if (!card) {
+    return (
+      <motion.button 
+        className="w-14 h-20 rounded-lg flex items-center justify-center"
+        style={{
+          background: hasSelectedCard ? 'rgba(212, 175, 55, 0.2)' : 'rgba(212, 175, 55, 0.1)',
+          border: '2px dashed #D4AF37',
+          boxShadow: hasSelectedCard 
+            ? '0 0 25px rgba(212, 175, 55, 0.6)' 
+            : '0 0 15px rgba(212, 175, 55, 0.3)',
+          cursor: hasSelectedCard ? 'pointer' : 'default'
+        }}
+        onClick={hasSelectedCard ? onClick : undefined}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ 
+          opacity: 1, 
+          scale: 1,
+          boxShadow: hasSelectedCard 
+            ? ['0 0 25px rgba(212, 175, 55, 0.6)', '0 0 35px rgba(212, 175, 55, 0.8)', '0 0 25px rgba(212, 175, 55, 0.6)']
+            : ['0 0 15px rgba(212, 175, 55, 0.3)', '0 0 25px rgba(212, 175, 55, 0.5)', '0 0 15px rgba(212, 175, 55, 0.3)']
+        }}
+        whileHover={hasSelectedCard ? { scale: 1.05 } : {}}
+        whileTap={hasSelectedCard ? { scale: 0.95 } : {}}
+        transition={{ 
+          duration: 0.3,
+          boxShadow: { duration: 1.5, repeat: Infinity }
+        }}
+        data-testid={`bonus-slot-${slotNumber}`}
+      >
+        <span className="text-amber-400 text-xs font-bold">
+          {hasSelectedCard ? 'HIER' : 'AKTIV'}
+        </span>
+      </motion.button>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      className="relative"
+    >
+      <PlayingCard
+        card={card}
+        isPlayable={false}
+        isCovered={false}
+        size="md"
+      />
+    </motion.div>
   );
 }

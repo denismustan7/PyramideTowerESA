@@ -36,11 +36,19 @@ export interface PyramidNode {
   coveredBy: string[]; // IDs of cards covering this one
 }
 
+// Bonus slot state
+export interface BonusSlotState {
+  card: Card | null; // Card currently on the slot
+  isActive: boolean; // Whether the slot is unlocked
+}
+
 // Game state
 export interface GameState {
   pyramids: PyramidNode[][]; // Three pyramids
   drawPile: Card[]; // Face-down draw pile
   discardPile: Card[]; // Face-up discard pile (top is current)
+  bonusSlot1: BonusSlotState; // Unlocked at 4 combo
+  bonusSlot2: BonusSlotState; // Unlocked at 7 combo
   score: number;
   combo: number; // Current combo multiplier
   maxCombo: number; // Highest combo achieved this game
@@ -114,6 +122,8 @@ export const PERFECT_BONUS = 5000;
 export const TIME_BONUS_MULTIPLIER = 10;
 export const BASE_TIME = 120; // 2 minutes base time
 export const TIME_DECREASE_PER_LEVEL = 5;
+export const BONUS_SLOT_1_COMBO = 4; // Combo needed to unlock slot 1
+export const BONUS_SLOT_2_COMBO = 7; // Combo needed to unlock slot 2
 
 // Multiplayer types
 export interface MultiplayerPlayer {

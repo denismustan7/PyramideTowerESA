@@ -1,0 +1,25 @@
+Bitte implementiere die Bonus-Kartenplätze genau nach folgenden Regeln:
+1. Aktivierungs-Bedingung:
+• Die zwei zusätzlichen Ablageplätze unter den Türmen sind standardmäßig unsichtbar oder gesperrt.
+• Platz 1 wird erst aktiviert, sobald der Spieler eine 4er-Combo erreicht (4 Karten hintereinander ohne Nachziehstapel).
+• Platz 2 wird aktiviert, sobald der Spieler eine 7er-Combo erreicht.
+• Sobald sie aktiviert sind, leuchten die Plätze kurz auf (goldener Effekt), um dem Spieler zu zeigen, dass er sie jetzt nutzen kann.
+2. Funktionsweise der Slots:
+• Der Spieler kann nun Karten aus dem Turm auf diese Slots legen, sofern sie passen (+1 / -1 zum Wert der Karte, die aktuell auf dem jeweiligen Slot liegt).
+• Dies ermöglicht es dem Spieler, parallel zum Hauptstapel zwei weitere Ketten aufzubauen, um das Board schneller zu leeren.
+3. Reset-Bedingung (Wichtig):
+• Sobald der Spieler auf den Nachziehstapel (Deck) tippt, um eine neue Karte zu öffnen, werden beide Bonus-Slots sofort deaktiviert.
+• Die Karten auf diesen Plätzen verschwinden (oder werden ausgegraut) und der Combo-Zähler wird auf 0 gesetzt.
+• Der Spieler muss erst wieder eine neue 4er- oder 7er-Combo aufbauen, um die Plätze erneut nutzen zu können.
+4. Visuelles Feedback:
+• Die Slots sollten eine gestrichelte, goldene Umrandung haben, wenn sie leer, aber aktiv sind.
+• Wenn sie deaktiviert werden (beim Ziehen vom Deck), sollen sie mit einer kurzen Animation (z. B. "Einfrieren" oder "Verblassen") verschwinden.
+Zusammenfassung für dein Gesamtprojekt in Replit
+Damit Replit den Kontext nicht verliert, hier die kombinierte Liste deiner Anforderungen für das nächste Update:
+• Grafik: Dunkler High-Contrast Modus, Magic-Tower Kartendesign, riesige Zahlen, keine Hilfslinien/Markierungen.
+• Zeit: Neon-Zeitbalken (Blau -> Rot).
+• Multiplayer: Room-System via Code für bis zu 6 Freunde; synchronisiertes Karten-Deck.
+• Profi-Mechanik: * Combo-Zähler implementieren.
+• Bonus-Slot 1 bei Combo 4 freischalten.
+• Bonus-Slot 2 bei Combo 7 freischalten.
+• Reset: Beim Ziehen einer Karte vom Deck (Nachziehstapel) werden die Bonus-Slots sofort gelöscht und gesperrt.

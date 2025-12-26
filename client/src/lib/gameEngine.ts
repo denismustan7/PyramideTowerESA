@@ -1,4 +1,4 @@
-import type { Card, CardValue, Suit, GameState, PyramidNode, ScoreBreakdown } from '@shared/schema';
+import type { Card, CardValue, Suit, GameState, PyramidNode, ScoreBreakdown, BonusSlotState } from '@shared/schema';
 import { 
   canPlayCard, 
   CARD_VALUES, 
@@ -8,6 +8,8 @@ import {
   TIME_BONUS_MULTIPLIER,
   BASE_TIME,
   TIME_DECREASE_PER_LEVEL,
+  BONUS_SLOT_1_COMBO,
+  BONUS_SLOT_2_COMBO,
   getRank
 } from '@shared/schema';
 
@@ -176,6 +178,8 @@ export function initGame(level: number = 1, seed?: number): GameState {
     pyramids,
     drawPile,
     discardPile: [discardCard],
+    bonusSlot1: { card: null, isActive: false },
+    bonusSlot2: { card: null, isActive: false },
     score: 0,
     combo: 0,
     maxCombo: 0,
@@ -302,6 +306,14 @@ export function playCard(gameState: GameState, cardId: string): GameState {
     newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
   }
   
+  // Check and activate bonus slots based on combo
+  if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
+    newState.bonusSlot1 = { ...newState.bonusSlot1, isActive: true };
+  }
+  if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
+    newState.bonusSlot2 = { ...newState.bonusSlot2, isActive: true };
+  }
+  
   return newState;
 }
 
@@ -336,8 +348,117 @@ export function drawCard(gameState: GameState): GameState {
   // Add to discard pile
   newState.discardPile.push(drawnCard);
   
-  // Reset combo
+  // Reset combo and deactivate bonus slots
   newState.combo = 0;
+  newState.bonusSlot1 = { card: null, isActive: false };
+  newState.bonusSlot2 = { card: null, isActive: false };
+  
+  return newState;
+}
+
+// Check if a card can be played on a bonus slot
+export function canPlayOnBonusSlot(gameState: GameState, cardId: string, slotNumber: 1 | 2): boolean {
+  const slot = slotNumber === 1 ? gameState.bonusSlot1 : gameState.bonusSlot2;
+  if (!slot.isActive) return false;
+  
+  // Find the card in pyramids
+  let cardToPlay: Card | null = null;
+  for (const peak of gameState.pyramids) {
+    for (const node of peak) {
+      if (node.card && node.card.id === cardId && node.card.isPlayable) {
+        cardToPlay = node.card;
+        break;
+      }
+    }
+    if (cardToPlay) break;
+  }
+  
+  if (!cardToPlay) return false;
+  
+  // If slot is empty, any card can be placed
+  if (!slot.card) return true;
+  
+  // Otherwise, check +1/-1 rule
+  return canPlayCard(cardToPlay.value, slot.card.value);
+}
+
+// Play a card onto a bonus slot
+export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNumber: 1 | 2): GameState {
+  if (!canPlayOnBonusSlot(gameState, cardId, slotNumber)) {
+    return gameState;
+  }
+  
+  const newState = { ...gameState };
+  newState.pyramids = gameState.pyramids.map(peak => [...peak]);
+  
+  let playedCard: Card | null = null;
+  let playedPeakIndex = -1;
+  
+  // Find and remove the card from pyramids
+  for (let peakIdx = 0; peakIdx < newState.pyramids.length; peakIdx++) {
+    const peak = newState.pyramids[peakIdx];
+    for (let nodeIdx = 0; nodeIdx < peak.length; nodeIdx++) {
+      const node = peak[nodeIdx];
+      if (node.card && node.card.id === cardId) {
+        playedCard = { ...node.card };
+        playedPeakIndex = peakIdx;
+        newState.pyramids[peakIdx] = peak.map((n, i) => 
+          i === nodeIdx ? { ...n, card: null } : n
+        );
+        break;
+      }
+    }
+    if (playedCard) break;
+  }
+  
+  if (!playedCard) return gameState;
+  
+  // Place card on bonus slot
+  playedCard.isFaceUp = true;
+  if (slotNumber === 1) {
+    newState.bonusSlot1 = { card: playedCard, isActive: true };
+  } else {
+    newState.bonusSlot2 = { card: playedCard, isActive: true };
+  }
+  
+  // Increase combo
+  newState.combo++;
+  newState.maxCombo = Math.max(newState.maxCombo, newState.combo);
+  
+  // Calculate score for this play
+  const points = BASE_POINTS * newState.combo;
+  newState.score += points;
+  
+  // Update cards remaining
+  newState.cardsRemaining--;
+  
+  // Update playability of other cards
+  newState.pyramids = updatePlayability(newState.pyramids);
+  
+  // Check if a tower was cleared
+  const peakCleared = checkPeakCleared(newState.pyramids, playedPeakIndex);
+  if (peakCleared) {
+    newState.towersCleared++;
+    const towerBonus = TOWER_BONUS * newState.towersCleared;
+    newState.score += towerBonus;
+  }
+  
+  // Check for win condition
+  if (newState.cardsRemaining === 0) {
+    newState.phase = 'won';
+    if (newState.drawPile.length > 0) {
+      newState.score += PERFECT_BONUS;
+    }
+    newState.score += newState.timeRemaining * TIME_BONUS_MULTIPLIER;
+  }
+  
+  // Check and activate bonus slots based on combo (if not already active)
+  if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
+    newState.bonusSlot1 = { ...newState.bonusSlot1, isActive: true };
+  }
+  if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
+    newState.bonusSlot2 = { ...newState.bonusSlot2, isActive: true };
+  }
   
   return newState;
 }

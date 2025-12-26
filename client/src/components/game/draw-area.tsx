@@ -1,23 +1,47 @@
-import { motion } from "framer-motion";
-import type { Card } from "@shared/schema";
-import { PlayingCard } from "./playing-card";
+import { motion, AnimatePresence } from "framer-motion";
+import type { Card, BonusSlotState } from "@shared/schema";
+import { PlayingCard, BonusSlot } from "./playing-card";
 
 interface DrawAreaProps {
   drawPile: Card[];
   discardPile: Card[];
+  bonusSlot1: BonusSlotState;
+  bonusSlot2: BonusSlotState;
+  selectedCardId: string | null;
   onDraw: () => void;
+  onPlayOnSlot: (slotNumber: 1 | 2) => void;
   disabled?: boolean;
 }
 
-export function DrawArea({ drawPile, discardPile, onDraw, disabled = false }: DrawAreaProps) {
+export function DrawArea({ 
+  drawPile, 
+  discardPile, 
+  bonusSlot1, 
+  bonusSlot2,
+  selectedCardId,
+  onDraw,
+  onPlayOnSlot,
+  disabled = false 
+}: DrawAreaProps) {
   const discardTop = discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
   const hasCards = drawPile.length > 0;
 
   return (
     <div className="relative z-20 p-4 pb-6 bg-[#000814]/95 border-t border-amber-500/30">
-      <div className="flex items-center justify-center gap-8 max-w-md mx-auto">
+      <div className="flex items-center justify-center gap-4 max-w-lg mx-auto">
+        <AnimatePresence mode="wait">
+          <BonusSlot 
+            key="slot1"
+            card={bonusSlot1.card} 
+            isActive={bonusSlot1.isActive} 
+            slotNumber={1}
+            hasSelectedCard={!!selectedCardId}
+            onClick={() => onPlayOnSlot(1)}
+          />
+        </AnimatePresence>
+
         <motion.button
-          className={`relative w-20 h-28 rounded-lg flex items-center justify-center ${
+          className={`relative w-16 h-22 rounded-lg flex items-center justify-center ${
             hasCards && !disabled
               ? 'cursor-pointer'
               : 'cursor-not-allowed'
@@ -29,12 +53,26 @@ export function DrawArea({ drawPile, discardPile, onDraw, disabled = false }: Dr
         >
           {hasCards ? (
             <>
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#0B1D3C] to-[#051026] border-2 border-amber-500/40 transform translate-x-1 translate-y-1 shadow-lg" />
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-[#0B1D3C] to-[#051026] border-2 border-amber-500/50 shadow-lg">
-                <div className="absolute inset-1 border border-amber-500/30 rounded-md" />
-                <div className="absolute inset-2 border border-amber-500/20 rounded" />
+              <div 
+                className="absolute inset-0 rounded-lg transform translate-x-0.5 translate-y-0.5 shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #0B1D3C 0%, #051026 100%)',
+                  border: '2px solid rgba(212, 175, 55, 0.4)',
+                }}
+              />
+              <div 
+                className="absolute inset-0 rounded-lg shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, #0B1D3C 0%, #051026 100%)',
+                  border: '2px solid rgba(212, 175, 55, 0.5)',
+                }}
+              >
+                <div 
+                  className="absolute inset-1 rounded-md"
+                  style={{ border: '1px solid rgba(212, 175, 55, 0.3)' }}
+                />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" className="w-8 h-8 text-amber-500/70">
+                  <svg viewBox="0 0 24 24" className="w-6 h-6" style={{ color: 'rgba(212, 175, 55, 0.7)' }}>
                     <path 
                       fill="currentColor" 
                       d="M12 2L8 8H4L6 14L4 20H20L18 14L20 8H16L12 2ZM12 5L14.5 9H17L15.5 13L17 18H7L8.5 13L7 9H9.5L12 5Z"
@@ -43,14 +81,20 @@ export function DrawArea({ drawPile, discardPile, onDraw, disabled = false }: Dr
                 </div>
               </div>
               <div 
-                className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black text-sm font-bold flex items-center justify-center shadow-lg"
-                style={{ boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)' }}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-black text-xs font-bold flex items-center justify-center shadow-lg"
+                style={{ 
+                  background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)',
+                  boxShadow: '0 0 8px rgba(212, 175, 55, 0.5)' 
+                }}
               >
                 {drawPile.length}
               </div>
             </>
           ) : (
-            <div className="w-full h-full rounded-lg border-2 border-dashed border-gray-700/50 flex items-center justify-center">
+            <div 
+              className="w-full h-full rounded-lg flex items-center justify-center"
+              style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
+            >
               <span className="text-gray-600 text-xs">Leer</span>
             </div>
           )}
@@ -63,23 +107,36 @@ export function DrawArea({ drawPile, discardPile, onDraw, disabled = false }: Dr
               initial={{ scale: 0.8, y: -30, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               transition={{ type: "spring", damping: 15 }}
-              className="w-20 h-28"
             >
               <PlayingCard
                 card={discardTop}
                 isPlayable={false}
-                size="lg"
+                size="md"
               />
             </motion.div>
           ) : (
-            <div className="w-20 h-28 rounded-lg border-2 border-dashed border-gray-700/50 flex items-center justify-center">
+            <div 
+              className="w-14 h-20 rounded-lg flex items-center justify-center"
+              style={{ border: '2px dashed rgba(100, 100, 100, 0.5)' }}
+            >
               <span className="text-gray-600 text-xs">Ablage</span>
             </div>
           )}
         </div>
+
+        <AnimatePresence mode="wait">
+          <BonusSlot 
+            key="slot2"
+            card={bonusSlot2.card} 
+            isActive={bonusSlot2.isActive} 
+            slotNumber={2}
+            hasSelectedCard={!!selectedCardId}
+            onClick={() => onPlayOnSlot(2)}
+          />
+        </AnimatePresence>
       </div>
       
-      <p className="text-center text-gray-500 text-xs mt-4">
+      <p className="text-center text-gray-500 text-xs mt-3">
         Tippe auf eine Karte mit +1 oder -1 Wert
       </p>
     </div>

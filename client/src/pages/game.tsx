@@ -12,6 +12,8 @@ import {
   drawCard, 
   tickTimer, 
   canPlay, 
+  canPlayOnBonusSlot,
+  playCardOnBonusSlot,
   getDiscardTop,
   calculateScoreBreakdown,
   getRank
@@ -68,6 +70,7 @@ export default function GamePage() {
   const [isPaused, setIsPaused] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
   const [shakeCardId, setShakeCardId] = useState<string | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const submitScore = useMutation({
@@ -107,11 +110,26 @@ export default function GamePage() {
 
     if (canPlay(gameState, cardId)) {
       setGameState(prev => playCard(prev, cardId));
+      setSelectedCardId(null);
+    } else if (gameState.bonusSlot1.isActive || gameState.bonusSlot2.isActive) {
+      setSelectedCardId(cardId);
     } else {
       setShakeCardId(cardId);
       setTimeout(() => setShakeCardId(null), 300);
     }
   }, [gameState, isPaused]);
+
+  const handlePlayOnBonusSlot = useCallback((slotNumber: 1 | 2) => {
+    if (!selectedCardId || gameState.phase !== 'playing' || isPaused) return;
+
+    if (canPlayOnBonusSlot(gameState, selectedCardId, slotNumber)) {
+      setGameState(prev => playCardOnBonusSlot(prev, selectedCardId, slotNumber));
+      setSelectedCardId(null);
+    } else {
+      setShakeCardId(selectedCardId);
+      setTimeout(() => setShakeCardId(null), 300);
+    }
+  }, [gameState, selectedCardId, isPaused]);
 
   const handleDraw = useCallback(() => {
     if (gameState.phase !== 'playing' || isPaused) return;
@@ -126,6 +144,7 @@ export default function GamePage() {
     }
 
     setGameState(prev => drawCard(prev));
+    setSelectedCardId(null);
   }, [gameState, isPaused, toast]);
 
   const togglePause = () => {
@@ -200,7 +219,11 @@ export default function GamePage() {
       <DrawArea
         drawPile={gameState.drawPile}
         discardPile={gameState.discardPile}
+        bonusSlot1={gameState.bonusSlot1}
+        bonusSlot2={gameState.bonusSlot2}
+        selectedCardId={selectedCardId}
         onDraw={handleDraw}
+        onPlayOnSlot={handlePlayOnBonusSlot}
         disabled={isPaused || gameState.phase !== 'playing'}
       />
 
