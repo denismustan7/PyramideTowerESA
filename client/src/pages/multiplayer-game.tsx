@@ -192,6 +192,12 @@ export default function MultiplayerGamePage() {
         break;
         
       case 'player_finished':
+        // Update the player's finished status in our local state
+        setPlayers(prev => prev.map(p => 
+          p.id === message.payload.playerId 
+            ? { ...p, finished: true, score: message.payload.score }
+            : p
+        ));
         toast({
           title: `${message.payload.playerName} hat die Runde beendet!`,
         });
@@ -306,6 +312,11 @@ export default function MultiplayerGamePage() {
     if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated && !hasFinishedRound) {
       setHasFinishedRound(true);
       setCanSpectateWhileWaiting(true);
+      
+      // Update own finished status in players list
+      setPlayers(prev => prev.map(p => 
+        p.id === playerId ? { ...p, finished: true, score: state.score } : p
+      ));
       
       wsRef.current.send(JSON.stringify({
         type: 'round_finished',
@@ -579,6 +590,8 @@ export default function MultiplayerGamePage() {
         currentPlayerId={playerId}
         currentRound={currentRound}
         totalRounds={totalRounds}
+        canSpectate={isEliminated || canSpectateWhileWaiting}
+        onSpectatePlayer={handleSpectatePlayer}
       />
 
       <AnimatePresence>
@@ -632,8 +645,8 @@ export default function MultiplayerGamePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none"
-            style={{ background: 'rgba(0, 8, 20, 0.7)' }}
+            className="fixed inset-0 z-20 flex items-center justify-center pointer-events-none"
+            style={{ background: 'rgba(0, 8, 20, 0.5)' }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -653,9 +666,14 @@ export default function MultiplayerGamePage() {
               <p className="text-sm text-gray-400 mb-4">
                 Deine Punkte: <span className="text-amber-300 font-bold">{gameState.score}</span>
               </p>
-              <p className="text-xs text-gray-500">
-                Du kannst die Ansicht anderer Spieler beobachten
+              <p className="text-xs text-cyan-400 mb-2">
+                Klicke auf Namen in der Punktetabelle um zuzuschauen
               </p>
+              {players.filter(p => !p.finished && !p.isEliminated && p.id !== playerId).length > 0 && (
+                <p className="text-xs text-gray-500">
+                  {players.filter(p => !p.finished && !p.isEliminated && p.id !== playerId).length} Spieler noch aktiv
+                </p>
+              )}
             </motion.div>
           </motion.div>
         )}

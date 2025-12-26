@@ -23,9 +23,18 @@ interface LiveScoreboardProps {
   currentPlayerId: string;
   currentRound: number;
   totalRounds: number;
+  canSpectate?: boolean;
+  onSpectatePlayer?: (playerId: string) => void;
 }
 
-export function LiveScoreboard({ players, currentPlayerId, currentRound, totalRounds }: LiveScoreboardProps) {
+export function LiveScoreboard({ 
+  players, 
+  currentPlayerId, 
+  currentRound, 
+  totalRounds,
+  canSpectate = false,
+  onSpectatePlayer
+}: LiveScoreboardProps) {
   const previousRanksRef = useRef<Map<string, number>>(new Map());
   const [playersWithRanks, setPlayersWithRanks] = useState<PlayerWithRank[]>([]);
   
@@ -148,18 +157,27 @@ export function LiveScoreboard({ players, currentPlayerId, currentRound, totalRo
                   >
                     {player.isEliminated ? <Skull className="w-3 h-3" /> : `#${player.currentRank}`}
                   </motion.span>
-                  <span 
-                    className={`truncate ${
+                  <button 
+                    onClick={() => {
+                      if (canSpectate && onSpectatePlayer && !isCurrentPlayer && !player.isEliminated) {
+                        onSpectatePlayer(player.id);
+                      }
+                    }}
+                    className={`truncate text-left ${
                       player.isEliminated 
-                        ? 'text-red-400 line-through' 
+                        ? 'text-red-400 line-through cursor-default' 
                         : isCurrentPlayer 
-                          ? 'text-cyan-300' 
-                          : 'text-gray-300'
+                          ? 'text-cyan-300 cursor-default' 
+                          : canSpectate 
+                            ? 'text-gray-300 hover:text-cyan-300 cursor-pointer transition-colors' 
+                            : 'text-gray-300 cursor-default'
                     }`}
+                    disabled={!canSpectate || isCurrentPlayer || player.isEliminated}
+                    data-testid={`spectate-player-${player.id}`}
                   >
                     {player.name}
                     {isCurrentPlayer && !player.isEliminated && ' (Du)'}
-                  </span>
+                  </button>
                   {isLeader && !player.isEliminated && (
                     <motion.div
                       initial={{ scale: 0 }}
