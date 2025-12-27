@@ -768,14 +768,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 id: p.id,
                 name: p.name,
                 score: p.score,
+                totalScore: p.totalScore,
                 cardsRemaining: p.cardsRemaining,
-                finished: p.finished
+                finished: p.finished,
+                isEliminated: p.isEliminated
               }));
 
             ws.send(JSON.stringify({
               type: 'opponent_update',
               payload: { opponents }
             }));
+            
+            console.log(`[Rejoin] Player ${player.name} rejoined room ${roomCode}, sent ${opponents.length} opponents`);
           }
         }
         break;
