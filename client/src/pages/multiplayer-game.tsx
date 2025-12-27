@@ -131,9 +131,11 @@ export default function MultiplayerGamePage() {
   const [currentSeed, setCurrentSeed] = useState(initialSeed);
   const [hasFinishedRound, setHasFinishedRound] = useState(false);
   const [canSpectateWhileWaiting, setCanSpectateWhileWaiting] = useState(false);
+  const [timerEnded, setTimerEnded] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const timerEndedStateRef = useRef<GameState | null>(null);
 
   useEffect(() => {
     if (!initialSeed) {
@@ -253,6 +255,8 @@ export default function MultiplayerGamePage() {
         setIsReady(false);
         setReadyPlayers([]);
         setHasFinishedRound(false);
+        setTimerEnded(false);
+        timerEndedStateRef.current = null;
         setCanSpectateWhileWaiting(false);
         setIsSpectating(false);
         setSpectatingPlayerId(null);
@@ -363,14 +367,16 @@ export default function MultiplayerGamePage() {
 
   // Timer effect - must be after sendRoundFinished is defined
   useEffect(() => {
-    if (gameState?.phase === 'playing' && !isEliminated && !hasFinishedRound) {
+    if (gameState?.phase === 'playing' && !isEliminated && !hasFinishedRound && !timerEnded) {
       timerRef.current = setInterval(() => {
         setGameState(prev => {
           if (!prev) return prev;
           const newState = tickTimer(prev);
           if (newState.phase !== 'playing' && newState.phase !== prev.phase) {
             clearInterval(timerRef.current!);
-            sendRoundFinished(newState, 'time');
+            // Schedule the round finish for after the render cycle
+            timerEndedStateRef.current = newState;
+            setTimerEnded(true);
           }
           return newState;
         });
@@ -382,7 +388,16 @@ export default function MultiplayerGamePage() {
         clearInterval(timerRef.current);
       }
     };
-  }, [gameState?.phase, isEliminated, hasFinishedRound, sendRoundFinished]);
+  }, [gameState?.phase, isEliminated, hasFinishedRound, timerEnded]);
+  
+  // Handle timer end outside of setState callback
+  useEffect(() => {
+    if (timerEnded && timerEndedStateRef.current && !hasFinishedRound) {
+      sendRoundFinished(timerEndedStateRef.current, 'time');
+      setTimerEnded(false);
+      timerEndedStateRef.current = null;
+    }
+  }, [timerEnded, hasFinishedRound, sendRoundFinished]);
 
   const handleReadyForNextRound = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
