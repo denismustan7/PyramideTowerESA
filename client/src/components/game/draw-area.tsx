@@ -111,13 +111,7 @@ export function DrawArea({
   
   return (
     <div className="relative z-20 p-2 sm:p-3 pb-3 sm:pb-4 bg-[#000814]/95 border-t border-amber-500/30">
-      {isMobile && (
-        <div className="mb-2">
-          <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} isMobile={true} />
-        </div>
-      )}
       <div className="flex items-center justify-center gap-1.5 sm:gap-2 max-w-xl mx-auto">
-        {!isMobile && <TimerBar timeRemaining={timeRemaining} maxTime={maxTime} isMobile={false} />}
 
         <motion.button
           className={`relative rounded-md flex items-center justify-center ${

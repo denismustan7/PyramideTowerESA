@@ -38,30 +38,26 @@ function useResponsiveCardSize() {
       // Scale = available width / needed width
       
       if (vw < 360) {
-        // Very small phones - aggressive scaling
-        const scale = vw / 420;
-        setSize({ width: 44, height: 66, scale: Math.max(0.42, scale) });
+        // Very small phones
+        setSize({ width: 40, height: 60, scale: 0.48 });
       } else if (vw < 400) {
         // Small phones (iPhone SE, budget phones)
-        const scale = vw / 440;
-        setSize({ width: 46, height: 69, scale: Math.max(0.45, scale) });
+        setSize({ width: 42, height: 63, scale: 0.52 });
       } else if (vw < 440) {
         // Modern flagship phones portrait (iPhone 14/15/16 Pro ~393-430px)
-        const scale = vw / 460;
-        setSize({ width: 48, height: 72, scale: Math.max(0.48, scale) });
+        setSize({ width: 44, height: 66, scale: 0.56 });
       } else if (vw < 540) {
         // Large phones / phablets portrait
-        const scale = vw / 500;
-        setSize({ width: 52, height: 78, scale: Math.max(0.55, scale) });
+        setSize({ width: 46, height: 69, scale: 0.62 });
       } else if (vw < 768) {
         // Small tablets / phones landscape
-        setSize({ width: 56, height: 84, scale: 0.75 });
+        setSize({ width: 50, height: 75, scale: 0.72 });
       } else if (vw < 1024) {
         // Tablets
-        setSize({ width: 60, height: 90, scale: 0.85 });
+        setSize({ width: 54, height: 81, scale: 0.82 });
       } else {
         // Desktop
-        setSize({ width: 64, height: 96, scale: 0.92 });
+        setSize({ width: 58, height: 87, scale: 0.9 });
       }
     };
     
