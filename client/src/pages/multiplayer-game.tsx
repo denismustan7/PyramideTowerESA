@@ -97,7 +97,7 @@ export default function MultiplayerGamePage() {
   const playerId = params.get('player') || '';
   const initialSeed = parseInt(params.get('seed') || '0', 10);
   const initialRound = parseInt(params.get('round') || '1', 10);
-  const initialTotalRounds = parseInt(params.get('totalRounds') || '8', 10);
+  const initialTotalRounds = parseInt(params.get('totalRounds') || '10', 10);
   const initialRoundTime = parseInt(params.get('roundTime') || '60', 10);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -233,6 +233,25 @@ export default function MultiplayerGamePage() {
         }
         break;
         
+      case 'speed_bonus_awarded':
+        if (message.payload.playerId === playerId) {
+          toast({
+            title: "Speed Bonus! +1000",
+            description: "Du warst am schnellsten!",
+          });
+        } else {
+          toast({
+            title: `${message.payload.playerName} war am schnellsten! +1000`,
+          });
+        }
+        // Update player scores to reflect speed bonus
+        setPlayers(prev => prev.map(p => 
+          p.id === message.payload.playerId 
+            ? { ...p, score: p.score + message.payload.bonus, totalScore: p.totalScore + message.payload.bonus }
+            : p
+        ));
+        break;
+        
       case 'round_end':
         setShowRoundEnd(true);
         setRoundEndData({
@@ -339,6 +358,7 @@ export default function MultiplayerGamePage() {
           playerId,
           roomCode,
           score: state.score,
+          cardsRemaining: state.cardsRemaining,
           finishReason
         }
       };

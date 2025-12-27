@@ -237,17 +237,25 @@ export default function HomePage() {
                         <div>
                           <h4 className="text-cyan-300 text-sm font-medium mb-1">Runden & Zeit</h4>
                           <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>8 Runden insgesamt</li>
-                            <li>Runden 1-4: 60 Sekunden</li>
-                            <li>Ab Runde 5: -3 Sekunden pro Runde</li>
+                            <li>10 Runden insgesamt</li>
+                            <li>Runden 1-2: 75 Sekunden</li>
+                            <li>Runden 3-5: 70 Sekunden</li>
+                            <li>Ab Runde 6: -3 Sekunden pro Runde</li>
                           </ul>
                         </div>
                         <div>
                           <h4 className="text-cyan-300 text-sm font-medium mb-1">Elimination</h4>
                           <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>Ab Runde 5: Letzter Platz wird eliminiert</li>
-                            <li>Eliminierte konnen zuschauen</li>
+                            <li>2 Spieler: Ab Runde 9</li>
+                            <li>3 Spieler: Ab Runde 8</li>
+                            <li>4 Spieler: Ab Runde 7</li>
+                            <li>Letzter Platz wird eliminiert</li>
+                            <li>Am Ende spielt nur einer Runde 10</li>
                           </ul>
+                        </div>
+                        <div>
+                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Speed Bonus</h4>
+                          <p className="text-sm">+1000 Punkte fur den ersten Spieler, der alle Karten abraumt!</p>
                         </div>
                       </div>
                     </section>
@@ -256,24 +264,26 @@ export default function HomePage() {
                       <h3 className="text-cyan-300 font-semibold mb-2">Multiplayer (5-6 Spieler)</h3>
                       <div className="space-y-3">
                         <div>
-                          <h4 className="text-amber-300 text-sm font-medium mb-1">5 Spieler</h4>
-                          <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>9 Runden insgesamt</li>
-                            <li>Runden 1-5: 60 Sekunden</li>
-                            <li>Ab Runde 6: Elimination beginnt</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="text-amber-300 text-sm font-medium mb-1">6 Spieler</h4>
+                          <h4 className="text-amber-300 text-sm font-medium mb-1">Runden & Zeit</h4>
                           <ul className="list-disc list-inside space-y-1 text-sm">
                             <li>10 Runden insgesamt</li>
-                            <li>Runden 1-6: 60 Sekunden</li>
-                            <li>Ab Runde 7: Elimination beginnt</li>
+                            <li>Runden 1-2: 75 Sekunden</li>
+                            <li>Runden 3-5: 70 Sekunden</li>
+                            <li>Ab Runde 6: -3 Sekunden pro Runde</li>
                           </ul>
                         </div>
                         <div>
-                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Zeit-Reduzierung</h4>
-                          <p className="text-sm">Ab Elimination: -3 Sekunden pro Runde</p>
+                          <h4 className="text-amber-300 text-sm font-medium mb-1">Elimination</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>5 Spieler: Ab Runde 6</li>
+                            <li>6 Spieler: Ab Runde 5</li>
+                            <li>Letzter Platz wird eliminiert</li>
+                            <li>Am Ende spielt nur einer Runde 10</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Speed Bonus</h4>
+                          <p className="text-sm">+1000 Punkte fur den ersten Spieler, der alle Karten abraumt!</p>
                         </div>
                       </div>
                     </section>
