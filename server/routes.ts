@@ -39,9 +39,13 @@ const roundTimers = new Map<string, NodeJS.Timeout>();
 // Force round end if not all players have finished after timeout
 function forceRoundEnd(roomCode: string) {
   const room = rooms.get(roomCode);
-  if (!room || room.status !== 'playing') return;
+  console.log(`[ForceRoundEnd] Called for room ${roomCode}, room exists: ${!!room}, status: ${room?.status}`);
+  if (!room || room.status !== 'playing') {
+    console.log(`[ForceRoundEnd] Skipped - room not in playing state`);
+    return;
+  }
   
-  console.log(`[Server] Force ending round ${room.currentRound} for room ${roomCode}`);
+  console.log(`[ForceRoundEnd] Force ending round ${room.currentRound} for room ${roomCode}`);
   
   // Mark all active players as finished if they haven't already
   const activePlayers = getActivePlayers(room);
@@ -133,11 +137,15 @@ function startRoundTimer(roomCode: string, timeLimit: number) {
     clearTimeout(existingTimer);
   }
   
+  const totalTime = (timeLimit + 3) * 1000;
+  console.log(`[Timer] Starting ${totalTime/1000}s timer for room ${roomCode} (round time: ${timeLimit}s + 3s grace)`);
+  
   // Add 3 second grace period for network latency
   const timeout = setTimeout(() => {
+    console.log(`[Timer] Timer expired for room ${roomCode}, calling forceRoundEnd`);
     forceRoundEnd(roomCode);
     roundTimers.delete(roomCode);
-  }, (timeLimit + 3) * 1000);
+  }, totalTime);
   
   roundTimers.set(roomCode, timeout);
 }
