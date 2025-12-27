@@ -381,15 +381,21 @@ export function playCard(gameState: GameState, cardId: string): GameState {
     phase: newPhase
   };
   
-  // Check and activate bonus slots based on combo - generate a card automatically
-  // Only activate if not already active
-  if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
-    const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
+  // Check and activate bonus slots based on combo - draw card from deck
+  // Only activate if not already active and draw pile has cards
+  if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive && newState.drawPile.length > 0) {
+    newState.drawPile = [...newState.drawPile];
+    const bonusCard = { ...newState.drawPile.pop()! };
+    bonusCard.isFaceUp = true;
+    bonusCard.isPlayable = false;
     newState.bonusSlot1 = { card: bonusCard, isActive: true };
     newState.bonusSlot1ActivationCount++;
   }
-  if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
-    const bonusCard = generateBonusCard(newState.gameSeed, 2, newState.bonusSlot2ActivationCount);
+  if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive && newState.drawPile.length > 0) {
+    newState.drawPile = [...newState.drawPile];
+    const bonusCard = { ...newState.drawPile.pop()! };
+    bonusCard.isFaceUp = true;
+    bonusCard.isPlayable = false;
     newState.bonusSlot2 = { card: bonusCard, isActive: true };
     newState.bonusSlot2ActivationCount++;
   }
@@ -559,15 +565,21 @@ export function playCardOnBonusSlot(gameState: GameState, cardId: string, slotNu
     phase: newPhase
   };
   
-  // Activate bonus slots ONLY if they're not already active
+  // Activate bonus slots ONLY if they're not already active and draw pile has cards
   // This should never change an already-active slot's card
-  if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive) {
-    const bonusCard = generateBonusCard(newState.gameSeed, 1, newState.bonusSlot1ActivationCount);
+  if (newState.combo >= BONUS_SLOT_1_COMBO && !newState.bonusSlot1.isActive && newState.drawPile.length > 0) {
+    newState.drawPile = [...newState.drawPile];
+    const bonusCard = { ...newState.drawPile.pop()! };
+    bonusCard.isFaceUp = true;
+    bonusCard.isPlayable = false;
     newState.bonusSlot1 = { card: bonusCard, isActive: true };
     newState.bonusSlot1ActivationCount++;
   }
-  if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive) {
-    const bonusCard = generateBonusCard(newState.gameSeed, 2, newState.bonusSlot2ActivationCount);
+  if (newState.combo >= BONUS_SLOT_2_COMBO && !newState.bonusSlot2.isActive && newState.drawPile.length > 0) {
+    newState.drawPile = [...newState.drawPile];
+    const bonusCard = { ...newState.drawPile.pop()! };
+    bonusCard.isFaceUp = true;
+    bonusCard.isPlayable = false;
     newState.bonusSlot2 = { card: bonusCard, isActive: true };
     newState.bonusSlot2ActivationCount++;
   }
