@@ -34,25 +34,25 @@ function useResponsiveCardSize() {
       
       if (vw < 340) {
         // Very small phones (older/budget devices)
-        setSize({ width: 52, height: 78, scale: 0.55 });
-      } else if (vw < 390) {
+        setSize({ width: 56, height: 84, scale: 0.58 });
+      } else if (vw < 380) {
         // Small phones (iPhone SE, etc)
-        setSize({ width: 56, height: 84, scale: 0.62 });
-      } else if (vw < 440) {
-        // Modern flagship phones (iPhone 14/15/16 Pro, etc - ~390-430px)
-        setSize({ width: 64, height: 96, scale: 0.72 });
-      } else if (vw < 540) {
-        // Large phones / phablets
-        setSize({ width: 64, height: 96, scale: 0.78 });
-      } else if (vw < 768) {
-        // Small tablets
+        setSize({ width: 60, height: 90, scale: 0.68 });
+      } else if (vw < 430) {
+        // Modern flagship phones portrait (iPhone 14/15/16 Pro ~393px)
         setSize({ width: 64, height: 96, scale: 0.82 });
+      } else if (vw < 540) {
+        // Large phones / phablets portrait
+        setSize({ width: 64, height: 96, scale: 0.88 });
+      } else if (vw < 768) {
+        // Small tablets / phones landscape
+        setSize({ width: 64, height: 96, scale: 0.9 });
       } else if (vw < 1024) {
         // Tablets
-        setSize({ width: 64, height: 96, scale: 0.85 });
+        setSize({ width: 64, height: 96, scale: 0.92 });
       } else {
         // Desktop
-        setSize({ width: 64, height: 96, scale: 0.9 });
+        setSize({ width: 64, height: 96, scale: 0.95 });
       }
     };
     

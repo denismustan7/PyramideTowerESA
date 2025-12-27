@@ -90,9 +90,9 @@ export function DrawArea({
   useEffect(() => {
     const check = () => {
       const vw = window.innerWidth;
-      if (vw < 390) {
+      if (vw < 380) {
         setScreenSize('xs');
-      } else if (vw < 540) {
+      } else if (vw < 768) {
         setScreenSize('sm');
       } else {
         setScreenSize('md');
@@ -104,8 +104,8 @@ export function DrawArea({
   }, []);
 
   const cardSize = screenSize === 'xs' ? 'sm' : 'md';
-  const pileWidth = screenSize === 'xs' ? 48 : screenSize === 'sm' ? 52 : 56;
-  const pileHeight = screenSize === 'xs' ? 72 : screenSize === 'sm' ? 78 : 80;
+  const pileWidth = screenSize === 'xs' ? 52 : screenSize === 'sm' ? 56 : 64;
+  const pileHeight = screenSize === 'xs' ? 78 : screenSize === 'sm' ? 84 : 96;
 
   const isMobile = screenSize !== 'md';
   
