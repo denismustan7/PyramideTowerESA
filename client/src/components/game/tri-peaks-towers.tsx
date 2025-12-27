@@ -25,58 +25,52 @@ const suitColors: Record<Suit, { text: string; fill: string }> = {
   spades: { text: '#1f2937', fill: '#1f2937' },
 };
 
-function useResponsiveLayout() {
-  const [layout, setLayout] = useState({ 
-    cardWidth: 64, 
-    cardHeight: 96, 
-    scale: 0.85,
-    isPortrait: false 
-  });
+function useResponsiveCardSize() {
+  const [size, setSize] = useState({ width: 64, height: 96, scale: 0.85 });
   
   useEffect(() => {
-    const updateLayout = () => {
+    const updateSize = () => {
       const vw = window.innerWidth;
-      const isPortrait = vw < 500;
       
-      if (isPortrait) {
-        // Portrait mode: 2+1 tower layout
-        // Calculate card size to fit 2 towers side by side
-        // Each tower base = 4 cards with small overlap
-        // 2 towers + gap must fit in viewport
-        const availableWidth = vw - 16; // padding
-        const towerWidth = availableWidth / 2 - 4; // gap between towers
-        // Each tower has 4 cards at base with ~40% overlap
-        const cardWidth = Math.floor(towerWidth / 2.4);
-        const clampedWidth = Math.max(40, Math.min(56, cardWidth));
-        const cardHeight = Math.floor(clampedWidth * 1.5);
-        
-        setLayout({ 
-          cardWidth: clampedWidth, 
-          cardHeight, 
-          scale: 1.0,
-          isPortrait: true 
-        });
-      } else if (vw < 640) {
-        // Small landscape / larger phones
-        setLayout({ cardWidth: 52, cardHeight: 78, scale: 0.85, isPortrait: false });
+      // Calculate scale to fit 3 towers side by side
+      // Each tower base = ~4 cards wide with overlap
+      // Total width needed = ~10 card widths (with overlaps and gaps)
+      // Scale = available width / needed width
+      
+      if (vw < 360) {
+        // Very small phones - aggressive scaling
+        const scale = vw / 420;
+        setSize({ width: 44, height: 66, scale: Math.max(0.42, scale) });
+      } else if (vw < 400) {
+        // Small phones (iPhone SE, budget phones)
+        const scale = vw / 440;
+        setSize({ width: 46, height: 69, scale: Math.max(0.45, scale) });
+      } else if (vw < 440) {
+        // Modern flagship phones portrait (iPhone 14/15/16 Pro ~393-430px)
+        const scale = vw / 460;
+        setSize({ width: 48, height: 72, scale: Math.max(0.48, scale) });
+      } else if (vw < 540) {
+        // Large phones / phablets portrait
+        const scale = vw / 500;
+        setSize({ width: 52, height: 78, scale: Math.max(0.55, scale) });
       } else if (vw < 768) {
-        // Tablets landscape
-        setLayout({ cardWidth: 56, cardHeight: 84, scale: 0.9, isPortrait: false });
+        // Small tablets / phones landscape
+        setSize({ width: 56, height: 84, scale: 0.75 });
       } else if (vw < 1024) {
-        // Large tablets
-        setLayout({ cardWidth: 60, cardHeight: 90, scale: 0.92, isPortrait: false });
+        // Tablets
+        setSize({ width: 60, height: 90, scale: 0.85 });
       } else {
         // Desktop
-        setLayout({ cardWidth: 64, cardHeight: 96, scale: 0.95, isPortrait: false });
+        setSize({ width: 64, height: 96, scale: 0.92 });
       }
     };
     
-    updateLayout();
-    window.addEventListener('resize', updateLayout);
-    return () => window.removeEventListener('resize', updateLayout);
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
   }, []);
   
-  return layout;
+  return size;
 }
 
 interface TowerCardProps {
@@ -322,56 +316,15 @@ function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCard
 }
 
 export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCardId }: TriPeaksTowersProps) {
-  const { cardWidth, cardHeight, scale, isPortrait } = useResponsiveLayout();
+  const { width: cardWidth, height: cardHeight, scale } = useResponsiveCardSize();
   
   const getTowerNodes = (towerIdx: number): PyramidNode[] => {
     return pyramid.filter(n => n.tower === towerIdx);
   };
 
-  const towerGap = cardWidth < 50 ? -8 : cardWidth < 60 ? -12 : -16;
+  // Negative gap to make towers overlap slightly
+  const towerGap = cardWidth < 48 ? -6 : cardWidth < 56 ? -10 : -14;
 
-  if (isPortrait) {
-    // Portrait mode: 2 towers on top row, 1 centered below
-    return (
-      <div className="flex flex-col items-center gap-1 w-full px-1">
-        {/* Top row: Tower 0 and Tower 2 */}
-        <div className="flex items-end justify-center gap-2 w-full">
-          <SingleTower
-            nodes={getTowerNodes(0)}
-            towerIndex={0}
-            onCardClick={onCardClick}
-            selectedCardId={selectedCardId}
-            shakeCardId={shakeCardId}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-          />
-          <SingleTower
-            nodes={getTowerNodes(2)}
-            towerIndex={2}
-            onCardClick={onCardClick}
-            selectedCardId={selectedCardId}
-            shakeCardId={shakeCardId}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-          />
-        </div>
-        {/* Bottom row: Tower 1 centered */}
-        <div className="flex items-end justify-center w-full">
-          <SingleTower
-            nodes={getTowerNodes(1)}
-            towerIndex={1}
-            onCardClick={onCardClick}
-            selectedCardId={selectedCardId}
-            shakeCardId={shakeCardId}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Landscape mode: 3 towers side by side
   return (
     <div 
       className="flex items-end justify-center origin-top" 
