@@ -267,12 +267,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (currentPlayerId && currentRoomCode) {
         const room = rooms.get(currentRoomCode);
         if (room) {
-          // Don't immediately remove player - give them 5 seconds to reconnect
-          // This handles page navigation (lobby -> game) where WS briefly disconnects
           const disconnectedPlayerId = currentPlayerId;
           const disconnectedRoomCode = currentRoomCode;
           
-          console.log(`[WS] Player ${disconnectedPlayerId} disconnected from room ${disconnectedRoomCode}, waiting for reconnect...`);
+          // During active game, use longer timeout (60 seconds) to prevent accidental removal
+          // During lobby, use shorter timeout (10 seconds)
+          const isGameActive = room.status === 'playing' || room.status === 'round_end';
+          const timeout = isGameActive ? 60000 : 10000;
+          
+          console.log(`[WS] Player ${disconnectedPlayerId} disconnected from room ${disconnectedRoomCode} (status: ${room.status}), waiting ${timeout/1000}s for reconnect...`);
           
           setTimeout(() => {
             const roomAfterDelay = rooms.get(disconnectedRoomCode);
@@ -281,7 +284,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               // Only remove if player still has the OLD disconnected websocket
               // If they reconnected, player.ws will be a new OPEN connection
               if (player && player.ws.readyState !== WebSocket.OPEN) {
-                console.log(`[WS] Player ${disconnectedPlayerId} did not reconnect, removing from room`);
+                console.log(`[WS] Player ${disconnectedPlayerId} did not reconnect after ${timeout/1000}s, removing from room`);
                 roomAfterDelay.players.delete(disconnectedPlayerId);
                 playerToRoom.delete(disconnectedPlayerId);
                 
@@ -305,7 +308,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 console.log(`[WS] Player ${disconnectedPlayerId} reconnected successfully`);
               }
             }
-          }, 5000); // 5 second grace period for reconnection
+          }, timeout);
         }
       }
     });
