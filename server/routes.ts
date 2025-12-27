@@ -267,23 +267,45 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (currentPlayerId && currentRoomCode) {
         const room = rooms.get(currentRoomCode);
         if (room) {
-          room.players.delete(currentPlayerId);
-          playerToRoom.delete(currentPlayerId);
+          // Don't immediately remove player - give them 5 seconds to reconnect
+          // This handles page navigation (lobby -> game) where WS briefly disconnects
+          const disconnectedPlayerId = currentPlayerId;
+          const disconnectedRoomCode = currentRoomCode;
           
-          if (room.players.size === 0) {
-            rooms.delete(currentRoomCode);
-          } else {
-            if (!Array.from(room.players.values()).some(p => p.isHost)) {
-              const firstPlayer = room.players.values().next().value;
-              if (firstPlayer) {
-                firstPlayer.isHost = true;
+          console.log(`[WS] Player ${disconnectedPlayerId} disconnected from room ${disconnectedRoomCode}, waiting for reconnect...`);
+          
+          setTimeout(() => {
+            const roomAfterDelay = rooms.get(disconnectedRoomCode);
+            if (roomAfterDelay) {
+              const player = roomAfterDelay.players.get(disconnectedPlayerId);
+              // Only remove if player still has the OLD disconnected websocket
+              // If they reconnected, player.ws will be a new OPEN connection
+              if (player && player.ws.readyState !== WebSocket.OPEN) {
+                console.log(`[WS] Player ${disconnectedPlayerId} did not reconnect, removing from room`);
+                roomAfterDelay.players.delete(disconnectedPlayerId);
+                playerToRoom.delete(disconnectedPlayerId);
+                
+                if (roomAfterDelay.players.size === 0) {
+                  rooms.delete(disconnectedRoomCode);
+                  clearRoundTimer(disconnectedRoomCode);
+                  console.log(`[WS] Room ${disconnectedRoomCode} deleted (empty)`);
+                } else {
+                  if (!Array.from(roomAfterDelay.players.values()).some(p => p.isHost)) {
+                    const firstPlayer = roomAfterDelay.players.values().next().value;
+                    if (firstPlayer) {
+                      firstPlayer.isHost = true;
+                    }
+                  }
+                  broadcastToRoom(roomAfterDelay, {
+                    type: 'room_update',
+                    payload: { room: getRoomState(roomAfterDelay) }
+                  });
+                }
+              } else if (player) {
+                console.log(`[WS] Player ${disconnectedPlayerId} reconnected successfully`);
               }
             }
-            broadcastToRoom(room, {
-              type: 'room_update',
-              payload: { room: getRoomState(room) }
-            });
-          }
+          }, 5000); // 5 second grace period for reconnection
         }
       }
     });
