@@ -49,6 +49,7 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [rulesTab, setRulesTab] = useState<'2-4' | '5-6'>('2-4');
 
   const handleSoloPlay = () => {
     setLocation("/game");
@@ -176,6 +177,32 @@ export default function HomePage() {
                     Spielregeln
                   </DialogTitle>
                 </DialogHeader>
+                
+                <div className="flex gap-2 mb-4 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant={rulesTab === '2-4' ? 'default' : 'outline'}
+                    onClick={() => setRulesTab('2-4')}
+                    className={rulesTab === '2-4' 
+                      ? 'flex-1 bg-amber-600 hover:bg-amber-500 text-white' 
+                      : 'flex-1 border-amber-500/40 text-amber-400 hover:bg-amber-500/10'}
+                    data-testid="button-rules-2-4"
+                  >
+                    2-4 Spieler
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={rulesTab === '5-6' ? 'default' : 'outline'}
+                    onClick={() => setRulesTab('5-6')}
+                    className={rulesTab === '5-6' 
+                      ? 'flex-1 bg-cyan-600 hover:bg-cyan-500 text-white' 
+                      : 'flex-1 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10'}
+                    data-testid="button-rules-5-6"
+                  >
+                    5-6 Spieler
+                  </Button>
+                </div>
+
                 <div className="text-gray-300 space-y-4 overflow-y-auto flex-1 pr-2">
                   <section>
                     <h3 className="text-amber-300 font-semibold mb-2">Ziel</h3>
@@ -202,6 +229,55 @@ export default function HomePage() {
                       <li>Zeit-Bonus: Restzeit wird in Punkte umgewandelt</li>
                     </ul>
                   </section>
+
+                  {rulesTab === '2-4' ? (
+                    <section className="border-t border-amber-500/20 pt-4">
+                      <h3 className="text-amber-300 font-semibold mb-2">Multiplayer (2-4 Spieler)</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Runden & Zeit</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>8 Runden insgesamt</li>
+                            <li>Runden 1-4: 60 Sekunden</li>
+                            <li>Ab Runde 5: -3 Sekunden pro Runde</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Elimination</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>Ab Runde 5: Letzter Platz wird eliminiert</li>
+                            <li>Eliminierte konnen zuschauen</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </section>
+                  ) : (
+                    <section className="border-t border-cyan-500/20 pt-4">
+                      <h3 className="text-cyan-300 font-semibold mb-2">Multiplayer (5-6 Spieler)</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="text-amber-300 text-sm font-medium mb-1">5 Spieler</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>9 Runden insgesamt</li>
+                            <li>Runden 1-5: 60 Sekunden</li>
+                            <li>Ab Runde 6: Elimination beginnt</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="text-amber-300 text-sm font-medium mb-1">6 Spieler</h4>
+                          <ul className="list-disc list-inside space-y-1 text-sm">
+                            <li>10 Runden insgesamt</li>
+                            <li>Runden 1-6: 60 Sekunden</li>
+                            <li>Ab Runde 7: Elimination beginnt</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Zeit-Reduzierung</h4>
+                          <p className="text-sm">Ab Elimination: -3 Sekunden pro Runde</p>
+                        </div>
+                      </div>
+                    </section>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
