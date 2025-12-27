@@ -37,6 +37,16 @@ export function LiveScoreboard({
 }: LiveScoreboardProps) {
   const previousRanksRef = useRef<Map<string, number>>(new Map());
   const [playersWithRanks, setPlayersWithRanks] = useState<PlayerWithRank[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   useEffect(() => {
     // Sort by totalScore + current round score for live ranking
@@ -73,7 +83,71 @@ export function LiveScoreboard({
     });
     previousRanksRef.current = newRanks;
   }, [players]);
+
+  // Mobile: horizontal compact bar at top
+  if (isMobile) {
+    return (
+      <div 
+        className="fixed left-1 right-1 top-12 z-30 rounded overflow-hidden"
+        style={{ background: 'rgba(0, 20, 40, 0.9)' }}
+        data-testid="live-scoreboard"
+      >
+        <div className="flex items-center justify-center gap-2 px-2 py-1 overflow-x-auto">
+          <AnimatePresence mode="popLayout">
+            {playersWithRanks.map((player) => {
+              const isCurrentPlayer = player.id === currentPlayerId;
+              const isLeader = player.currentRank === 1 && !player.isEliminated;
+              const liveTotal = player.totalScore + player.score;
+              
+              return (
+                <motion.div
+                  key={player.id}
+                  layout
+                  layoutId={player.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ layout: { type: "spring", stiffness: 400, damping: 30 } }}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] flex-shrink-0 ${
+                    player.isEliminated 
+                      ? 'bg-red-950/40 opacity-50' 
+                      : isCurrentPlayer 
+                        ? 'bg-cyan-900/40 border border-cyan-600/30' 
+                        : 'bg-gray-800/30'
+                  }`}
+                  data-testid={`scoreboard-player-${player.id}`}
+                >
+                  <span className={`font-bold ${
+                    player.isEliminated ? 'text-red-500' : isLeader ? 'text-amber-400' : 'text-gray-500'
+                  }`}>
+                    {player.isEliminated ? <Skull className="w-2.5 h-2.5" /> : player.currentRank}
+                  </span>
+                  {isLeader && !player.isEliminated && (
+                    <Crown className="w-2.5 h-2.5" style={{ color: '#D4AF37' }} />
+                  )}
+                  <span className={`${
+                    player.isEliminated ? 'text-red-400/70 line-through' : isCurrentPlayer ? 'text-cyan-300' : 'text-gray-300'
+                  }`}>
+                    {player.name.length > 3 ? player.name.slice(0, 3) : player.name}
+                  </span>
+                  <motion.span 
+                    className={`font-semibold ${player.isEliminated ? 'text-red-400/70' : 'text-amber-300'}`}
+                    key={liveTotal}
+                    initial={{ scale: 1.1 }}
+                    animate={{ scale: 1 }}
+                  >
+                    {liveTotal >= 1000 ? (liveTotal / 1000).toFixed(1) + 'k' : liveTotal}
+                  </motion.span>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
   
+  // Desktop: vertical sidebar
   return (
     <div 
       className="fixed right-2 top-14 z-30 w-28 rounded overflow-hidden"
