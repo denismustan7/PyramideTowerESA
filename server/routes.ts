@@ -714,9 +714,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 payload: { room: getRoomState(room) }
               });
 
-              // Check if all active players are ready
-              const activePlayers = getActivePlayers(room);
-              const allReady = activePlayers.every(p => p.isReady);
+              // Check if all CONNECTED active players are ready (disconnected players don't block)
+              const activePlayers = getConnectedActivePlayers(room);
+              const allReady = activePlayers.length > 0 && activePlayers.every(p => p.isReady);
 
               if (allReady) {
                 // Start next round
