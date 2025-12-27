@@ -38,9 +38,9 @@ const cornerSizes = {
 };
 
 const centerRankSizes = {
-  sm: 'text-4xl',
-  md: 'text-5xl sm:text-6xl',
-  lg: 'text-6xl sm:text-7xl',
+  sm: 'text-[2rem]',
+  md: 'text-[2.5rem] sm:text-[3rem]',
+  lg: 'text-[3rem] sm:text-[3.5rem]',
 };
 
 function CardBack({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
