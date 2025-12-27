@@ -1,23 +1,33 @@
-# Magic Tower Multiplayer Game
+# Pyramide Tower (ESA-Solitär)
 
 ## Overview
-A Magic Tower-style solitaire card game for 1-4 players with real-time multiplayer support via WebSocket.
+A Tri-Peaks Solitaire card game for 1-6 players with real-time multiplayer support via WebSocket. Features arcade-style design with the "Press Start 2P" font aesthetic.
 
 ## Key Features
-- **1-4 Players**: Create a room and invite friends with a room code
-- **8 Rounds**: Each game consists of 8 rounds
+- **1-6 Players**: Create a room and invite friends with a room code
+- **10 Rounds**: All games consist of exactly 10 rounds
 - **Timer System**: 
-  - Rounds 1-3: 60 seconds
-  - Round 4: 55 seconds
-  - Round 5: 50 seconds (decrease by 5s each round)
+  - Rounds 1-2: 75 seconds
+  - Rounds 3-5: 70 seconds
+  - Round 6+: -3 seconds per round (67s, 64s, 61s, 58s, 55s)
   - Timer displayed as green progress bar (no numbers)
-- **Elimination System**:
-  - Round 5: 4th place player eliminated
-  - Round 6: 3rd place player eliminated
-  - Round 7: 2nd place player eliminated
-  - Eliminated players see skull icon but can spectate
+- **Dynamic Elimination System**:
+  - Elimination starts at round (11 - playerCount)
+  - 2 players: elimination at round 9
+  - 3 players: elimination at round 8
+  - 4 players: elimination at round 7
+  - 5 players: elimination at round 6
+  - 6 players: elimination at round 5
+  - Last place eliminated each round until 1 player remains for round 10
+  - Eliminated players can spectate
+- **Speed Bonus**: +1000 points for first player to clear all cards in a round
 - **Combo System**: Consecutive successful plays increase combo multiplier
-- **Leaderboard**: Top 10 players with highest scores
+- **Leaderboard**: Top 10 players with highest scores (cumulative across all rounds)
+
+## Card Design
+- Large centered rank (number/letter) for easy visibility
+- Small rank + suit indicators in top-left and bottom-right corners
+- Optimized for mobile portrait mode (iPhone 16 Pro primary target)
 
 ## Project Structure
 
@@ -25,30 +35,26 @@ A Magic Tower-style solitaire card game for 1-4 players with real-time multiplay
 - `App.tsx` - Main app with routing and providers
 - `lib/gameContext.tsx` - WebSocket connection and game state management
 - `pages/`
-  - `main-menu.tsx` - Home page with create/join game
+  - `home.tsx` - Home page with solo/multiplayer options and rules
   - `lobby.tsx` - Waiting room with player list and ready system
-  - `game.tsx` - Main game view
+  - `game.tsx` - Solo game view
+  - `multiplayer-game.tsx` - Multiplayer game view
 - `components/game/`
-  - `player-field.tsx` - Individual player's game area
-  - `player-grid.tsx` - Grid layout for 2-4 players
-  - `card-tower.tsx` - Stacked tower cards
-  - `action-hand.tsx` - +1/-1 action cards
-  - `game-card.tsx` - Card components (tower and action)
-  - `timer-bar.tsx` - Green progress bar timer
-  - `combo-badge.tsx` - Animated combo display
-  - `elimination-overlay.tsx` - Skull overlay for eliminated players
+  - `tri-peaks-towers.tsx` - Three pyramid card layout
+  - `playing-card.tsx` - Card component with large centered rank
+  - `draw-area.tsx` - Draw pile and discard
+  - `game-hud.tsx` - Score, timer, combo display
+  - `live-scoreboard.tsx` - Real-time player scores
   - `round-transition-overlay.tsx` - Round transition screen
-  - `game-over-overlay.tsx` - Final scores and winner
+  - `spectator-bar.tsx` - Spectating controls for eliminated players
   - `leaderboard-modal.tsx` - Top 10 champions
-  - `room-code-card.tsx` - Room code display with share
-  - `lobby-player-list.tsx` - Player list in lobby
 
 ### Backend (`server/`)
 - `routes.ts` - WebSocket server and REST API
 - `storage.ts` - In-memory storage for rooms, games, leaderboard
 
 ### Shared (`shared/`)
-- `schema.ts` - Type definitions for Room, Player, Game, Cards, Events
+- `schema.ts` - Type definitions for Room, Player, Game, Cards, Events, and game constants
 
 ## WebSocket Events
 
@@ -58,25 +64,34 @@ A Magic Tower-style solitaire card game for 1-4 players with real-time multiplay
 - `leave_room` - Leave current room
 - `set_ready` - Toggle ready status
 - `start_game` - Host starts the game
-- `play_card` - Play an action card on a tower card
-- `request_state` - Request current game state
+- `game_update` - Send score/cardsRemaining updates
+- `round_finished` - Player finished round (won/time/no_moves)
+- `ready_for_next_round` - Ready for next round
+- `spectate_player` - Switch spectating target
+- `rejoin_game` - Reconnect to active game
 
 ### Server to Client
 - `room_created` / `room_joined` / `room_update`
-- `game_started` / `game_update`
-- `timer_tick` - Every second countdown
-- `combo_trigger` - Player combo activated
-- `elimination_notice` - Player eliminated
-- `game_over` - Game ended with winner
-- `leaderboard_update` - Top 10 scores
+- `game_started` - Initial game start with seed
+- `opponent_update` - Other players' scores
+- `player_finished` - Player completed round
+- `speed_bonus_awarded` - First to clear gets +1000 bonus
+- `round_end` - Round ended with standings
+- `round_started` - New round with new seed
+- `player_eliminated` - Player eliminated from game
+- `game_over` - Game ended with final ranking
+- `spectator_update` - Spectating target changed
+- `error` - Error messages
 
-## Game Constants
-- `TOTAL_ROUNDS = 8`
-- `BASE_ROUND_TIME = 60` seconds
-- `TIME_DECREASE_PER_ROUND = 5` seconds (from round 4)
-- `ELIMINATION_START_ROUND = 5`
-- `MAX_PLAYERS = 4`
+## Game Constants (shared/schema.ts)
+- `TOTAL_ROUNDS = 10` - Fixed for all player counts
+- `SPEED_BONUS = 1000` - Bonus for first to clear
+- `MAX_PLAYERS = 6`
 - `MIN_PLAYERS_TO_START = 1`
+- Helper functions:
+  - `getRoundTime(round)` - Get time limit for round
+  - `getEliminationStartRound(playerCount)` - Calculate when elimination begins
+  - `shouldEliminate(round, playerCount)` - Check if elimination happens this round
 
 ## Tech Stack
 - React + Vite + TypeScript
