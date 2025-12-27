@@ -40,12 +40,22 @@ interface PlayerState {
 }
 
 function MagicalParticles() {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  
+  const particleCount = isMobile ? 8 : 20;
+  const particles = Array.from({ length: particleCount }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     delay: Math.random() * 5,
     duration: 3 + Math.random() * 4,
-    size: 2 + Math.random() * 3,
+    size: 2 + Math.random() * 2,
   }));
 
   return (
@@ -58,12 +68,12 @@ function MagicalParticles() {
             left: `${p.left}%`,
             width: p.size,
             height: p.size,
-            background: `radial-gradient(circle, rgba(34, 211, 238, 0.6), transparent)`,
+            background: `radial-gradient(circle, rgba(34, 211, 238, 0.5), transparent)`,
           }}
           initial={{ bottom: -20, opacity: 0 }}
           animate={{
             bottom: ['0%', '100%'],
-            opacity: [0, 0.8, 0],
+            opacity: [0, 0.6, 0],
           }}
           transition={{
             duration: p.duration,

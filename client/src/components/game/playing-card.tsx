@@ -27,7 +27,7 @@ const suitColors: Record<Suit, { text: string; fill: string }> = {
 
 const sizeClasses = {
   sm: 'w-10 h-14',
-  md: 'w-12 h-16 sm:w-14 sm:h-20',
+  md: 'w-11 h-16 sm:w-14 sm:h-20',
   lg: 'w-14 h-20 sm:w-16 sm:h-24',
 };
 
@@ -245,16 +245,29 @@ interface BonusSlotProps {
   slotNumber: 1 | 2;
   hasSelectedCard?: boolean;
   onClick?: () => void;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick }: BonusSlotProps) {
+const slotSizeClasses = {
+  sm: { width: 40, height: 56 },
+  md: { width: 56, height: 80 },
+  lg: { width: 64, height: 96 },
+};
+
+export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick, size = 'md' }: BonusSlotProps) {
+  const dimensions = slotSizeClasses[size];
+  
   if (!isActive) {
     return (
       <div 
-        className="w-12 h-16 sm:w-14 sm:h-20 rounded-lg"
+        className="rounded-lg"
         style={{
+          width: dimensions.width,
+          height: dimensions.height,
           background: 'rgba(0, 0, 0, 0.4)',
           border: '2px solid rgba(100, 100, 100, 0.4)',
+          minWidth: 40,
+          minHeight: 44,
         }}
       />
     );
@@ -272,7 +285,7 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
           card={card}
           isPlayable={false}
           isCovered={false}
-          size="md"
+          size={size}
         />
       </motion.div>
     );
@@ -280,11 +293,15 @@ export function BonusSlot({ card, isActive, slotNumber, hasSelectedCard, onClick
 
   return (
     <motion.div 
-      className="w-12 h-16 sm:w-14 sm:h-20 rounded-lg"
+      className="rounded-lg"
       style={{
+        width: dimensions.width,
+        height: dimensions.height,
         background: 'rgba(212, 175, 55, 0.1)',
         border: '2px dashed #D4AF37',
         boxShadow: '0 0 15px rgba(212, 175, 55, 0.3)',
+        minWidth: 40,
+        minHeight: 44,
       }}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ 

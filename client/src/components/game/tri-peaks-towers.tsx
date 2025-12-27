@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { PyramidNode, Card, Suit } from "@shared/schema";
 import { TOWER_ROWS, NUM_TOWERS } from "@shared/schema";
+import { useState, useEffect } from "react";
 
 interface TriPeaksTowersProps {
   pyramid: PyramidNode[];
@@ -24,6 +25,43 @@ const suitColors: Record<Suit, { text: string; fill: string }> = {
   spades: { text: '#1f2937', fill: '#1f2937' },
 };
 
+function useResponsiveCardSize() {
+  const [size, setSize] = useState({ width: 64, height: 96, scale: 0.85 });
+  
+  useEffect(() => {
+    const updateSize = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      
+      if (vw < 360) {
+        // Very small phones
+        setSize({ width: 40, height: 60, scale: 0.45 });
+      } else if (vw < 480) {
+        // Small phones
+        setSize({ width: 48, height: 72, scale: 0.5 });
+      } else if (vw < 640) {
+        // Regular phones
+        setSize({ width: 56, height: 80, scale: 0.55 });
+      } else if (vw < 768) {
+        // Large phones / small tablets
+        setSize({ width: 60, height: 88, scale: 0.7 });
+      } else if (vw < 1024) {
+        // Tablets
+        setSize({ width: 64, height: 96, scale: 0.8 });
+      } else {
+        // Desktop
+        setSize({ width: 64, height: 96, scale: 0.85 });
+      }
+    };
+    
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+  
+  return size;
+}
+
 interface TowerCardProps {
   card: Card;
   isPlayable: boolean;
@@ -31,23 +69,25 @@ interface TowerCardProps {
   isSelected: boolean;
   isShaking: boolean;
   onClick: () => void;
+  cardWidth: number;
+  cardHeight: number;
 }
 
-function CardBack() {
+function CardBack({ cardWidth, cardHeight }: { cardWidth: number; cardHeight: number }) {
   return (
     <div 
-      className="w-14 h-20 sm:w-16 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 relative"
+      className="rounded-lg overflow-hidden flex-shrink-0 relative"
       style={{
+        width: cardWidth,
+        height: cardHeight,
         background: '#FFFFFF',
         border: '1px solid #d1d5db',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}
     >
       <div 
-        className="absolute inset-[3px] rounded-md overflow-hidden"
-        style={{
-          background: '#dc2626',
-        }}
+        className="absolute inset-[2px] rounded-md overflow-hidden"
+        style={{ background: '#dc2626' }}
       >
         <div 
           className="absolute inset-0"
@@ -56,22 +96,22 @@ function CardBack() {
               repeating-linear-gradient(
                 45deg,
                 transparent,
-                transparent 3px,
-                rgba(255,255,255,0.15) 3px,
-                rgba(255,255,255,0.15) 4px
+                transparent 2px,
+                rgba(255,255,255,0.15) 2px,
+                rgba(255,255,255,0.15) 3px
               ),
               repeating-linear-gradient(
                 -45deg,
                 transparent,
-                transparent 3px,
-                rgba(255,255,255,0.15) 3px,
-                rgba(255,255,255,0.15) 4px
+                transparent 2px,
+                rgba(255,255,255,0.15) 2px,
+                rgba(255,255,255,0.15) 3px
               )
             `
           }}
         />
         <div 
-          className="absolute inset-1 rounded-sm"
+          className="absolute inset-0.5 rounded-sm"
           style={{ border: '1px solid rgba(255,255,255,0.3)' }}
         />
       </div>
@@ -79,29 +119,37 @@ function CardBack() {
   );
 }
 
-function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick }: TowerCardProps) {
+function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick, cardWidth, cardHeight }: TowerCardProps) {
   if (!card.isFaceUp) {
-    return <CardBack />;
+    return <CardBack cardWidth={cardWidth} cardHeight={cardHeight} />;
   }
 
   const colors = suitColors[card.suit];
   const isFaceCard = ['K', 'Q', 'J'].includes(card.value);
   const isAce = card.value === 'A';
+  const isSmall = cardWidth < 50;
+  const fontSize = isSmall ? 'text-[8px]' : cardWidth < 60 ? 'text-[10px]' : 'text-xs';
+  const suitSize = isSmall ? 'text-[7px]' : cardWidth < 60 ? 'text-[9px]' : 'text-[10px]';
+  const centerSize = isSmall ? 'text-lg' : cardWidth < 60 ? 'text-xl' : 'text-2xl';
 
   return (
     <motion.button
       className={cn(
-        "w-14 h-20 sm:w-16 sm:h-24 rounded-lg flex flex-col relative overflow-hidden flex-shrink-0",
+        "rounded-lg flex flex-col relative overflow-hidden flex-shrink-0",
         "transition-all duration-150",
         isPlayable ? "cursor-pointer" : "cursor-default pointer-events-none",
         isSelected && "ring-2 ring-amber-400 ring-offset-1"
       )}
       style={{
+        width: cardWidth,
+        height: cardHeight,
         background: '#FFFFFF',
         border: '1px solid #d1d5db',
         boxShadow: isPlayable 
           ? '0 3px 10px rgba(0,0,0,0.2)'
           : '0 2px 4px rgba(0,0,0,0.1)',
+        minWidth: 44,
+        minHeight: 44,
       }}
       onClick={isPlayable ? onClick : undefined}
       animate={isShaking ? {
@@ -109,8 +157,8 @@ function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick 
         transition: { duration: 0.3 }
       } : {}}
       whileHover={isPlayable ? { 
-        scale: 1.12, 
-        y: -6,
+        scale: 1.1, 
+        y: -4,
         boxShadow: '0 6px 15px rgba(0,0,0,0.25)'
       } : {}}
       whileTap={isPlayable ? { scale: 0.95 } : {}}
@@ -123,53 +171,32 @@ function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick 
         />
       )}
 
-      {/* Top-left corner */}
-      <div className="absolute top-0.5 left-1 flex flex-col items-center leading-none z-0">
-        <span 
-          className="font-bold text-xs sm:text-sm"
-          style={{ color: colors.text }}
-        >
+      <div className="absolute top-0.5 left-0.5 flex flex-col items-center leading-none z-0">
+        <span className={cn("font-bold", fontSize)} style={{ color: colors.text }}>
           {card.value}
         </span>
-        <span 
-          className="text-[10px] sm:text-xs"
-          style={{ color: colors.text }}
-        >
+        <span className={suitSize} style={{ color: colors.text }}>
           {suitSymbols[card.suit]}
         </span>
       </div>
 
-      {/* Bottom-right corner (inverted) */}
-      <div className="absolute bottom-0.5 right-1 flex flex-col items-center leading-none rotate-180 z-0">
-        <span 
-          className="font-bold text-xs sm:text-sm"
-          style={{ color: colors.text }}
-        >
+      <div className="absolute bottom-0.5 right-0.5 flex flex-col items-center leading-none rotate-180 z-0">
+        <span className={cn("font-bold", fontSize)} style={{ color: colors.text }}>
           {card.value}
         </span>
-        <span 
-          className="text-[10px] sm:text-xs"
-          style={{ color: colors.text }}
-        >
+        <span className={suitSize} style={{ color: colors.text }}>
           {suitSymbols[card.suit]}
         </span>
       </div>
 
-      {/* Center content */}
       <div className="flex-1 flex items-center justify-center z-0">
         {isAce ? (
-          <span 
-            className="text-2xl sm:text-3xl"
-            style={{ color: colors.text }}
-          >
+          <span className={centerSize} style={{ color: colors.text }}>
             {suitSymbols[card.suit]}
           </span>
         ) : isFaceCard ? (
-          <div 
-            className="flex items-center justify-center"
-            style={{ color: colors.text }}
-          >
-            <svg viewBox="0 0 40 60" className="w-8 h-12 sm:w-10 sm:h-14">
+          <div style={{ color: colors.text }}>
+            <svg viewBox="0 0 40 60" style={{ width: cardWidth * 0.5, height: cardHeight * 0.5 }}>
               {card.value === 'K' && (
                 <>
                   <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
@@ -200,10 +227,7 @@ function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick 
             </svg>
           </div>
         ) : (
-          <span 
-            className="text-2xl sm:text-3xl"
-            style={{ color: colors.text }}
-          >
+          <span className={centerSize} style={{ color: colors.text }}>
             {suitSymbols[card.suit]}
           </span>
         )}
@@ -218,15 +242,15 @@ interface SingleTowerProps {
   onCardClick: (cardId: string) => void;
   selectedCardId: string | null;
   shakeCardId: string | null;
+  cardWidth: number;
+  cardHeight: number;
 }
 
-function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCardId }: SingleTowerProps) {
+function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCardId, cardWidth, cardHeight }: SingleTowerProps) {
   const numRows = TOWER_ROWS.length;
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-  const cardWidth = isMobile ? 56 : 64;
   const cardGap = 1;
   const rowOffset = (cardWidth + cardGap) / 2;
-  const verticalOverlap = isMobile ? 40 : 48;
+  const verticalOverlap = cardHeight * 0.5;
 
   const getRowNodes = (rowIdx: number): PyramidNode[] => {
     return nodes.filter(n => n.row === rowIdx);
@@ -254,8 +278,7 @@ function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCard
                 return (
                   <div 
                     key={`empty-${towerIndex}-${rowIdx}-${colIdx}`} 
-                    className="w-14 h-20 sm:w-16 sm:h-24 flex-shrink-0"
-                    style={{ visibility: 'hidden' }}
+                    style={{ width: cardWidth, height: cardHeight, visibility: 'hidden' }}
                   />
                 );
               }
@@ -269,6 +292,8 @@ function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCard
                   isSelected={selectedCardId === node.card.id}
                   isShaking={shakeCardId === node.card.id}
                   onClick={() => onCardClick(node.card!.id)}
+                  cardWidth={cardWidth}
+                  cardHeight={cardHeight}
                 />
               );
             })}
@@ -280,16 +305,23 @@ function SingleTower({ nodes, towerIndex, onCardClick, selectedCardId, shakeCard
 }
 
 export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCardId }: TriPeaksTowersProps) {
+  const { width: cardWidth, height: cardHeight, scale } = useResponsiveCardSize();
+  
   const getTowerNodes = (towerIdx: number): PyramidNode[] => {
     return pyramid.filter(n => n.tower === towerIdx);
   };
 
+  const towerGap = cardWidth < 50 ? -12 : cardWidth < 60 ? -16 : -18;
+
   return (
-    <div className="flex items-end justify-center scale-[0.55] sm:scale-[0.85] origin-top" style={{ marginTop: '0px' }}>
+    <div 
+      className="flex items-end justify-center origin-top" 
+      style={{ transform: `scale(${scale})`, marginTop: '0px' }}
+    >
       {Array.from({ length: NUM_TOWERS }, (_, towerIdx) => (
         <div 
           key={`tower-${towerIdx}`}
-          style={{ marginLeft: towerIdx > 0 ? '-18px' : '0' }}
+          style={{ marginLeft: towerIdx > 0 ? `${towerGap}px` : '0' }}
         >
           <SingleTower
             nodes={getTowerNodes(towerIdx)}
@@ -297,6 +329,8 @@ export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCard
             onCardClick={onCardClick}
             selectedCardId={selectedCardId}
             shakeCardId={shakeCardId}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
           />
         </div>
       ))}

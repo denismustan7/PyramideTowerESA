@@ -10,7 +10,17 @@ import { useToast } from "@/hooks/use-toast";
 import type { MultiplayerRoom, MultiplayerPlayer } from "@shared/schema";
 
 function MagicalParticles() {
-  const particles = Array.from({ length: 15 }, (_, i) => ({
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  
+  const particleCount = isMobile ? 6 : 15;
+  const particles = Array.from({ length: particleCount }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     delay: Math.random() * 5,
