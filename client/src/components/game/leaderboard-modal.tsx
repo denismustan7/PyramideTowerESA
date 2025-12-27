@@ -1,7 +1,6 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, X, Calendar, Globe, Crown, Medal } from "lucide-react";
+import { Trophy, X, Globe, Crown, Medal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { LeaderboardEntry } from "@shared/schema";
@@ -15,10 +14,8 @@ const rankIcons = [Crown, Trophy, Medal];
 const rankColors = ["text-amber-400", "text-gray-300", "text-amber-600"];
 
 export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
-  const [activeTab, setActiveTab] = useState<'daily' | 'global'>('global');
-
   const { data: entries = [], isLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: ['/api/leaderboard', activeTab],
+    queryKey: ['/api/leaderboard'],
     enabled: isOpen
   });
 
@@ -66,32 +63,10 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
               </Button>
             </div>
 
-            {/* Tab Switcher */}
-            <div className="flex gap-2 p-3 border-b border-amber-500/20">
-              <Button
-                variant={activeTab === 'global' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('global')}
-                className={activeTab === 'global' 
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' 
-                  : 'border-gray-600 text-gray-400'}
-                data-testid="button-tab-global"
-              >
-                <Globe className="w-4 h-4 mr-1.5" />
-                Global
-              </Button>
-              <Button
-                variant={activeTab === 'daily' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('daily')}
-                className={activeTab === 'daily' 
-                  ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50' 
-                  : 'border-gray-600 text-gray-400'}
-                data-testid="button-tab-daily"
-              >
-                <Calendar className="w-4 h-4 mr-1.5" />
-                Heute
-              </Button>
+            {/* Global Top 10 Header */}
+            <div className="flex items-center gap-2 p-3 border-b border-amber-500/20">
+              <Globe className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-400 font-medium">Top 10 - Multiplayer</span>
             </div>
 
             {/* Leaderboard List */}

@@ -2,47 +2,51 @@ import type { LeaderboardEntry, InsertLeaderboard } from "@shared/schema";
 import { getRank } from "@shared/schema";
 
 export interface IStorage {
-  // Leaderboard
-  getLeaderboard(type: 'daily' | 'global', limit?: number): LeaderboardEntry[];
-  addLeaderboardEntry(playerName: string, score: number): LeaderboardEntry;
+  // Leaderboard - global top 10 only
+  getLeaderboard(limit?: number): LeaderboardEntry[];
+  addLeaderboardEntry(playerName: string, score: number): LeaderboardEntry | null;
 }
 
 export class MemStorage implements IStorage {
-  private leaderboard: Map<number, LeaderboardEntry> = new Map();
+  private leaderboard: LeaderboardEntry[] = [];
   private nextId = 1;
 
   constructor() {}
 
-  getLeaderboard(type: 'daily' | 'global', limit: number = 10): LeaderboardEntry[] {
-    const today = new Date().toISOString().split('T')[0];
-    
-    let entries = Array.from(this.leaderboard.values());
-    
-    // Filter by type
-    if (type === 'daily') {
-      entries = entries.filter(e => e.date === today);
-    }
-    
-    // Sort by score descending
-    entries.sort((a, b) => b.score - a.score);
-    
-    // Return top N
-    return entries.slice(0, limit);
+  getLeaderboard(limit: number = 10): LeaderboardEntry[] {
+    // Return top 10 sorted by score descending
+    return this.leaderboard.slice(0, limit);
   }
 
-  addLeaderboardEntry(playerName: string, score: number): LeaderboardEntry {
-    const today = new Date().toISOString().split('T')[0];
+  addLeaderboardEntry(playerName: string, score: number): LeaderboardEntry | null {
     const rank = getRank(score);
+    
+    // Check if score qualifies for top 10
+    if (this.leaderboard.length >= 10) {
+      const lowestScore = this.leaderboard[this.leaderboard.length - 1].score;
+      if (score <= lowestScore) {
+        // Score doesn't beat any existing entry
+        return null;
+      }
+    }
     
     const entry: LeaderboardEntry = {
       id: this.nextId++,
       playerName,
       score,
       rank,
-      date: today
+      date: new Date().toISOString().split('T')[0]
     };
     
-    this.leaderboard.set(entry.id, entry);
+    // Add entry and sort
+    this.leaderboard.push(entry);
+    this.leaderboard.sort((a, b) => b.score - a.score);
+    
+    // Keep only top 10
+    if (this.leaderboard.length > 10) {
+      this.leaderboard = this.leaderboard.slice(0, 10);
+    }
+    
     return entry;
   }
 }

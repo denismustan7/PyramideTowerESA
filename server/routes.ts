@@ -834,15 +834,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   }
 
-  app.get("/api/leaderboard/:type", (req, res) => {
-    const type = req.params.type as 'daily' | 'global';
-    
-    if (type !== 'daily' && type !== 'global') {
-      return res.status(400).json({ error: "Invalid leaderboard type" });
-    }
-    
-    const limit = parseInt(req.query.limit as string) || 10;
-    const entries = storage.getLeaderboard(type, limit);
+  // Global top 10 leaderboard (multiplayer only)
+  app.get("/api/leaderboard", (req, res) => {
+    const entries = storage.getLeaderboard(10);
     res.json(entries);
   });
 
@@ -860,6 +854,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     
     const { playerName, score } = result.data;
     const entry = storage.addLeaderboardEntry(playerName, score);
-    res.json(entry);
+    
+    if (entry) {
+      res.json(entry);
+    } else {
+      res.json({ message: "Score not high enough for top 10" });
+    }
   });
 }
