@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Play, Trophy, HelpCircle, Users, User } from "lucide-react";
+import { Trophy, HelpCircle, Users, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LeaderboardModal } from "@/components/game/leaderboard-modal";
 
@@ -91,16 +90,26 @@ export default function HomePage() {
           className="text-center"
         >
           <h1 
-            className="text-5xl font-bold mb-2"
+            className="text-4xl sm:text-5xl font-black mb-2 tracking-wider uppercase"
             style={{ 
               color: '#D4AF37',
-              textShadow: '0 0 30px rgba(212, 175, 55, 0.6), 0 0 60px rgba(212, 175, 55, 0.3)'
+              textShadow: '0 0 30px rgba(212, 175, 55, 0.6), 0 0 60px rgba(212, 175, 55, 0.3), 2px 2px 0 #000',
+              fontFamily: '"Press Start 2P", "Courier New", monospace',
+              letterSpacing: '0.1em'
             }}
             data-testid="text-title"
           >
-            Magic Tower
+            Pyramide Tower
           </h1>
-          <p className="text-gray-400 text-lg">Tri-Peaks Solitaire</p>
+          <p 
+            className="text-gray-300 text-lg tracking-wide"
+            style={{ 
+              fontFamily: '"Press Start 2P", "Courier New", monospace',
+              fontSize: '0.7rem'
+            }}
+          >
+            ESA-Solitär
+          </p>
         </motion.div>
 
         <motion.div
@@ -199,43 +208,6 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="w-full"
-        >
-          <Card 
-            className="border-amber-500/20"
-            style={{ background: 'rgba(0, 20, 40, 0.8)' }}
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm text-amber-400/80">Range</CardTitle>
-            </CardHeader>
-            <CardContent className="text-xs text-gray-400 space-y-1">
-              <div className="flex justify-between">
-                <span>Novize</span>
-                <span>0 - 10.000</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Zauberlehrling</span>
-                <span>10.001 - 30.000</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Magier</span>
-                <span>30.001 - 70.000</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Erzmagier</span>
-                <span>70.001 - 150.000</span>
-              </div>
-              <div className="flex justify-between text-amber-400">
-                <span>Turmwachter</span>
-                <span>150.000+</span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </motion.div>
 
       <LeaderboardModal 
