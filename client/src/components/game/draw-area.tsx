@@ -110,7 +110,9 @@ export function DrawArea({
   const isMobile = screenSize !== 'md';
   
   return (
-    <div className="relative z-20 p-2 sm:p-3 pb-3 sm:pb-4 bg-[#000814]/95 border-t border-amber-500/30">
+    <div 
+      className="relative z-20 p-2 sm:p-3 pb-24 sm:pb-4 bg-[#000814]/95 border-t border-amber-500/30"
+    >
       <div className="flex items-center justify-center gap-1.5 sm:gap-2 max-w-xl mx-auto">
 
         <motion.button
