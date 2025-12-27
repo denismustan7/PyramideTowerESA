@@ -318,8 +318,8 @@ export function TriPeaksTowers({ pyramid, onCardClick, selectedCardId, shakeCard
     return pyramid.filter(n => n.tower === towerIdx);
   };
 
-  // Negative gap to make towers overlap slightly
-  const towerGap = cardWidth < 48 ? -6 : cardWidth < 56 ? -10 : -14;
+  // Negative gap so towers touch/overlap
+  const towerGap = cardWidth < 48 ? -18 : cardWidth < 56 ? -22 : -26;
 
   return (
     <div 
