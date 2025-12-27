@@ -26,8 +26,8 @@ const suitColors: Record<Suit, { text: string; fill: string }> = {
 };
 
 const sizeClasses = {
-  sm: 'w-10 h-14',
-  md: 'w-11 h-16 sm:w-14 sm:h-20',
+  sm: 'w-12 h-[72px]',
+  md: 'w-13 h-[78px] sm:w-14 sm:h-20',
   lg: 'w-14 h-20 sm:w-16 sm:h-24',
 };
 
@@ -249,8 +249,8 @@ interface BonusSlotProps {
 }
 
 const slotSizeClasses = {
-  sm: { width: 40, height: 56 },
-  md: { width: 56, height: 80 },
+  sm: { width: 48, height: 72 },
+  md: { width: 52, height: 78 },
   lg: { width: 64, height: 96 },
 };
 

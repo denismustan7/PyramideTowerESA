@@ -31,26 +31,28 @@ function useResponsiveCardSize() {
   useEffect(() => {
     const updateSize = () => {
       const vw = window.innerWidth;
-      const vh = window.innerHeight;
       
-      if (vw < 360) {
-        // Very small phones
-        setSize({ width: 40, height: 60, scale: 0.45 });
-      } else if (vw < 480) {
-        // Small phones
-        setSize({ width: 48, height: 72, scale: 0.5 });
-      } else if (vw < 640) {
-        // Regular phones
-        setSize({ width: 56, height: 80, scale: 0.55 });
+      if (vw < 340) {
+        // Very small phones (older/budget devices)
+        setSize({ width: 52, height: 78, scale: 0.55 });
+      } else if (vw < 390) {
+        // Small phones (iPhone SE, etc)
+        setSize({ width: 56, height: 84, scale: 0.62 });
+      } else if (vw < 440) {
+        // Modern flagship phones (iPhone 14/15/16 Pro, etc - ~390-430px)
+        setSize({ width: 64, height: 96, scale: 0.72 });
+      } else if (vw < 540) {
+        // Large phones / phablets
+        setSize({ width: 64, height: 96, scale: 0.78 });
       } else if (vw < 768) {
-        // Large phones / small tablets
-        setSize({ width: 60, height: 88, scale: 0.7 });
+        // Small tablets
+        setSize({ width: 64, height: 96, scale: 0.82 });
       } else if (vw < 1024) {
         // Tablets
-        setSize({ width: 64, height: 96, scale: 0.8 });
+        setSize({ width: 64, height: 96, scale: 0.85 });
       } else {
         // Desktop
-        setSize({ width: 64, height: 96, scale: 0.85 });
+        setSize({ width: 64, height: 96, scale: 0.9 });
       }
     };
     

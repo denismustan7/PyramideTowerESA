@@ -85,19 +85,30 @@ export function DrawArea({
   const discardTop = discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
   const hasCards = drawPile.length > 0;
   
-  const [isMobile, setIsMobile] = useState(false);
+  const [screenSize, setScreenSize] = useState<'xs' | 'sm' | 'md'>('md');
   
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 480);
+    const check = () => {
+      const vw = window.innerWidth;
+      if (vw < 390) {
+        setScreenSize('xs');
+      } else if (vw < 540) {
+        setScreenSize('sm');
+      } else {
+        setScreenSize('md');
+      }
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const cardSize = isMobile ? 'sm' : 'md';
-  const pileWidth = isMobile ? 40 : 56;
-  const pileHeight = isMobile ? 56 : 80;
+  const cardSize = screenSize === 'xs' ? 'sm' : 'md';
+  const pileWidth = screenSize === 'xs' ? 48 : screenSize === 'sm' ? 52 : 56;
+  const pileHeight = screenSize === 'xs' ? 72 : screenSize === 'sm' ? 78 : 80;
 
+  const isMobile = screenSize !== 'md';
+  
   return (
     <div className="relative z-20 p-2 sm:p-3 pb-3 sm:pb-4 bg-[#000814]/95 border-t border-amber-500/30">
       {isMobile && (
