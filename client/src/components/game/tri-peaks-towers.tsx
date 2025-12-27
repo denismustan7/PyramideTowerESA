@@ -132,12 +132,11 @@ function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick,
   }
 
   const colors = suitColors[card.suit];
-  const isFaceCard = ['K', 'Q', 'J'].includes(card.value);
-  const isAce = card.value === 'A';
   const isSmall = cardWidth < 50;
   const fontSize = isSmall ? 'text-[8px]' : cardWidth < 60 ? 'text-[10px]' : 'text-xs';
   const suitSize = isSmall ? 'text-[7px]' : cardWidth < 60 ? 'text-[9px]' : 'text-[10px]';
-  const centerSize = isSmall ? 'text-lg' : cardWidth < 60 ? 'text-xl' : 'text-2xl';
+  // Large centered rank - sized relative to card
+  const centerRankSize = isSmall ? 'text-[1.5rem]' : cardWidth < 60 ? 'text-[1.75rem]' : 'text-[2rem]';
 
   return (
     <motion.button
@@ -197,47 +196,9 @@ function TowerCard({ card, isPlayable, isDimmed, isSelected, isShaking, onClick,
       </div>
 
       <div className="flex-1 flex items-center justify-center z-0">
-        {isAce ? (
-          <span className={centerSize} style={{ color: colors.text }}>
-            {suitSymbols[card.suit]}
-          </span>
-        ) : isFaceCard ? (
-          <div style={{ color: colors.text }}>
-            <svg viewBox="0 0 40 60" style={{ width: cardWidth * 0.5, height: cardHeight * 0.5 }}>
-              {card.value === 'K' && (
-                <>
-                  <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  <rect x="17" y="10" width="6" height="3" fill="currentColor"/>
-                  <path d="M12 20 L28 20 L26 35 L20 32 L14 35 Z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  <line x1="20" y1="35" x2="20" y2="50" stroke="currentColor" strokeWidth="2"/>
-                  <line x1="14" y1="50" x2="26" y2="50" stroke="currentColor" strokeWidth="2"/>
-                  <line x1="8" y1="25" x2="32" y2="25" stroke="currentColor" strokeWidth="1.5"/>
-                </>
-              )}
-              {card.value === 'Q' && (
-                <>
-                  <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  <path d="M15 8 L20 5 L25 8" fill="none" stroke="currentColor" strokeWidth="1"/>
-                  <path d="M12 20 L28 20 L26 40 L14 40 Z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  <ellipse cx="20" cy="48" rx="8" ry="4" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                </>
-              )}
-              {card.value === 'J' && (
-                <>
-                  <circle cx="20" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  <rect x="16" y="7" width="8" height="4" fill="currentColor"/>
-                  <path d="M14 20 L26 20 L26 35 L14 35 Z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  <line x1="20" y1="35" x2="20" y2="48" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M15 48 L20 52 L25 48" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                </>
-              )}
-            </svg>
-          </div>
-        ) : (
-          <span className={centerSize} style={{ color: colors.text }}>
-            {suitSymbols[card.suit]}
-          </span>
-        )}
+        <span className={cn("font-bold", centerRankSize)} style={{ color: colors.text }}>
+          {card.value}
+        </span>
       </div>
     </motion.button>
   );
