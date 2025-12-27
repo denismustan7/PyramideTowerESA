@@ -165,10 +165,10 @@ export default function HomePage() {
                 </Button>
               </DialogTrigger>
               <DialogContent 
-                className="max-w-lg border-amber-500/30"
+                className="max-w-lg border-amber-500/30 max-h-[80vh] overflow-hidden flex flex-col"
                 style={{ background: 'linear-gradient(to bottom, #001020, #000814)' }}
               >
-                <DialogHeader>
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle 
                     className="text-xl"
                     style={{ color: '#D4AF37' }}
@@ -176,7 +176,7 @@ export default function HomePage() {
                     Spielregeln
                   </DialogTitle>
                 </DialogHeader>
-                <div className="text-gray-300 space-y-4">
+                <div className="text-gray-300 space-y-4 overflow-y-auto flex-1 pr-2">
                   <section>
                     <h3 className="text-amber-300 font-semibold mb-2">Ziel</h3>
                     <p>Raume alle Karten von den drei Pyramiden ab, bevor die Zeit ablauft.</p>
