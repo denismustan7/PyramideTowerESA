@@ -136,48 +136,59 @@ export const PERFECT_BONUS = 5000;
 export const DECK_BONUS_PER_CARD = 500; // 500 points per remaining draw pile card when level completed
 export const INVALID_MOVE_PENALTY = 200; // Points deducted for clicking playable card that doesn't fit
 export const TIME_BONUS_MULTIPLIER = 10;
-export const BASE_TIME = 60; // 60 seconds base time
+export const BASE_TIME = 60; // 60 seconds base time (for single player)
 export const TIME_DECREASE_START_ROUND = 5; // Timer starts decreasing from round 5
 export const TIME_DECREASE_PER_LEVEL = 5; // 5 seconds less per round starting from round 5
 export const BONUS_SLOT_1_COMBO = 4; // Combo needed to unlock slot 1
 export const BONUS_SLOT_2_COMBO = 7; // Combo needed to unlock slot 2
 
-// Multiplayer configuration based on player count
-export const MULTIPLAYER_CONFIG = {
-  4: {
-    totalRounds: 8,
-    baseTimeRounds: 4, // Rounds 1-4 have 60 seconds
-    timeDecreaseStartRound: 5,
-    eliminationStartRound: 5,
-    timeDecreasePerRound: 3
-  },
-  5: {
-    totalRounds: 9,
-    baseTimeRounds: 5,
-    timeDecreaseStartRound: 6,
-    eliminationStartRound: 6,
-    timeDecreasePerRound: 3
-  },
-  6: {
-    totalRounds: 10,
-    baseTimeRounds: 6, // Rounds 1-6 have 60 seconds
-    timeDecreaseStartRound: 7,
-    eliminationStartRound: 7,
-    timeDecreasePerRound: 3
-  }
-} as const;
+// NEW MULTIPLAYER SYSTEM CONSTANTS
+export const MULTIPLAYER_TOTAL_ROUNDS = 10; // All games have exactly 10 rounds
+export const SPEED_BONUS = 1000; // Bonus for first player to clear all pyramids in a round
 
-export function getMultiplayerConfig(playerCount: number) {
-  if (playerCount <= 4) return MULTIPLAYER_CONFIG[4];
-  if (playerCount === 5) return MULTIPLAYER_CONFIG[5];
-  return MULTIPLAYER_CONFIG[6];
+// New time system for multiplayer
+// Rounds 1-2: 75 seconds
+// Rounds 3-5: 70 seconds
+// Round 6+: Decreases by 3s per round (67s, 64s, 61s, 58s)
+export function getMultiplayerRoundTime(round: number): number {
+  if (round <= 2) return 75;
+  if (round <= 5) return 70;
+  // Round 6+: 70 - 3*(round - 5)
+  // Round 6 = 67, Round 7 = 64, Round 8 = 61, Round 9 = 58, Round 10 = 55
+  return Math.max(30, 70 - 3 * (round - 5));
 }
 
+// Calculate when elimination starts so exactly 1 player finishes round 10
+// With N players, we need N-1 eliminations over rounds 10-(N-1) to 9
+// Elimination starts at round: 11 - N (so N-1 eliminations happen before round 10)
+export function getEliminationStartRound(playerCount: number): number {
+  // For 2 players: 11-2 = 9 (1 elimination after round 9)
+  // For 3 players: 11-3 = 8 (2 eliminations after rounds 8, 9)
+  // For 4 players: 11-4 = 7 (3 eliminations after rounds 7, 8, 9)
+  // For 5 players: 11-5 = 6 (4 eliminations after rounds 6, 7, 8, 9)
+  // For 6 players: 11-6 = 5 (5 eliminations after rounds 5, 6, 7, 8, 9)
+  return 11 - playerCount;
+}
+
+// Check if elimination should happen after this round
+export function shouldEliminateAfterRound(round: number, playerCount: number): boolean {
+  const eliminationStart = getEliminationStartRound(playerCount);
+  // Eliminate after rounds: eliminationStart through 9 (not after round 10)
+  return round >= eliminationStart && round < MULTIPLAYER_TOTAL_ROUNDS;
+}
+
+// Legacy config for backwards compatibility - maps to new system
+export function getMultiplayerConfig(playerCount: number) {
+  return {
+    totalRounds: MULTIPLAYER_TOTAL_ROUNDS,
+    eliminationStartRound: getEliminationStartRound(playerCount),
+  };
+}
+
+// New getRoundTime function for multiplayer
 export function getRoundTime(round: number, playerCount: number): number {
-  const config = getMultiplayerConfig(playerCount);
-  if (round <= config.baseTimeRounds) return BASE_TIME;
-  const decreaseRounds = round - config.baseTimeRounds;
-  return Math.max(30, BASE_TIME - (decreaseRounds * config.timeDecreasePerRound));
+  // Always use the new multiplayer time system
+  return getMultiplayerRoundTime(round);
 }
 
 // Multiplayer types
@@ -231,6 +242,7 @@ export type WSMessageType =
   | 'room_update'
   | 'spectate_player'
   | 'spectator_update'
+  | 'speed_bonus_awarded'
   | 'error';
 
 export interface WSMessage {

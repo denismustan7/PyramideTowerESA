@@ -3,7 +3,14 @@ import type { Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { z } from "zod";
-import { getMultiplayerConfig, getRoundTime, BASE_TIME } from "@shared/schema";
+import { 
+  getMultiplayerConfig, 
+  getRoundTime, 
+  MULTIPLAYER_TOTAL_ROUNDS, 
+  SPEED_BONUS,
+  shouldEliminateAfterRound,
+  getEliminationStartRound
+} from "@shared/schema";
 
 interface Room {
   code: string;
@@ -16,6 +23,7 @@ interface Room {
   totalRounds: number;
   roundTimeLimit: number;
   playerCount: number; // Number of players when game started
+  roundSpeedWinnerId: string | null; // Player who cleared first in current round
 }
 
 interface RoomPlayer {
@@ -220,10 +228,8 @@ function getConnectedActivePlayers(room: Room): RoomPlayer[] {
 }
 
 function checkAndEliminatePlayer(room: Room): RoomPlayer | null {
-  const config = getMultiplayerConfig(room.playerCount);
-  
-  // Only eliminate if we're at or past the elimination start round
-  if (room.currentRound < config.eliminationStartRound) return null;
+  // Use the new shouldEliminateAfterRound logic
+  if (!shouldEliminateAfterRound(room.currentRound, room.playerCount)) return null;
   
   const activePlayers = getActivePlayers(room);
   if (activePlayers.length <= 1) return null; // Don't eliminate if only 1 player left
@@ -339,9 +345,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           maxPlayers: 6,
           createdAt: Date.now(),
           currentRound: 1,
-          totalRounds: 8,
-          roundTimeLimit: BASE_TIME,
-          playerCount: 1
+          totalRounds: MULTIPLAYER_TOTAL_ROUNDS,
+          roundTimeLimit: 75, // Round 1 time
+          playerCount: 1,
+          roundSpeedWinnerId: null
         };
 
         room.players.set(playerId, {
@@ -502,12 +509,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
             // Set up game configuration based on player count
             room.playerCount = room.players.size;
-            const config = getMultiplayerConfig(room.playerCount);
-            room.totalRounds = config.totalRounds;
+            room.totalRounds = MULTIPLAYER_TOTAL_ROUNDS; // Always 10 rounds
             room.currentRound = 1;
             room.roundTimeLimit = getRoundTime(1, room.playerCount);
             room.status = 'playing';
             room.gameSeed = Date.now();
+            room.roundSpeedWinnerId = null; // Reset for new game
 
             for (const [playerId, p] of room.players) {
               p.score = 0;
@@ -547,13 +554,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           if (room) {
             const player = room.players.get(currentPlayerId);
             if (player && !player.isEliminated && !player.finished) {
-              const { score, finishReason } = message.payload;
+              const { score, finishReason, cardsRemaining } = message.payload;
               player.score = score;
-              player.totalScore += score;
+              player.cardsRemaining = cardsRemaining || 0;
+              
+              // Check for speed bonus - first player to clear all cards
+              let speedBonusAwarded = false;
+              if (cardsRemaining === 0 && room.roundSpeedWinnerId === null) {
+                room.roundSpeedWinnerId = player.id;
+                player.score += SPEED_BONUS;
+                speedBonusAwarded = true;
+                console.log(`[Speed Bonus] ${player.name} cleared first! +${SPEED_BONUS} points`);
+                
+                // Broadcast speed bonus to all players
+                broadcastToRoom(room, {
+                  type: 'speed_bonus_awarded',
+                  payload: {
+                    playerId: player.id,
+                    playerName: player.name,
+                    round: room.currentRound,
+                    bonus: SPEED_BONUS
+                  }
+                });
+              }
+              
+              player.totalScore += player.score;
               player.finished = true;
               player.isReady = false;
               
-              console.log(`[Round] Player ${player.name} finished round ${room.currentRound} with score ${score} (reason: ${finishReason})`);
+              console.log(`[Round] Player ${player.name} finished round ${room.currentRound} with score ${player.score}${speedBonusAwarded ? ' (includes speed bonus)' : ''} (reason: ${finishReason})`);
 
               // Broadcast that this player has finished to all other players
               broadcastToRoom(room, {
@@ -695,6 +724,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 room.roundTimeLimit = getRoundTime(room.currentRound, room.playerCount);
                 room.gameSeed = Date.now() + room.currentRound; // New seed for new round
                 room.status = 'playing';
+                room.roundSpeedWinnerId = null; // Reset speed bonus tracker for new round
 
                 for (const [playerId, p] of room.players) {
                   p.score = 0;
