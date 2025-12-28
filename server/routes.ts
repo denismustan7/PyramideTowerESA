@@ -830,11 +830,111 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             
             // Only mark finished if not already finished
             if (finished && !player.finished) {
-              player.finished = finished;
+              // Check for speed bonus - first player to clear all cards
+              let speedBonusAwarded = false;
+              if (cardsRemaining === 0 && room.roundSpeedWinnerId === null) {
+                room.roundSpeedWinnerId = player.id;
+                player.score += SPEED_BONUS;
+                speedBonusAwarded = true;
+                console.log(`[Speed Bonus via game_update] ${player.name} cleared first! +${SPEED_BONUS} points`);
+                
+                broadcastToRoom(room, {
+                  type: 'speed_bonus_awarded',
+                  payload: {
+                    playerId: player.id,
+                    playerName: player.name,
+                    round: room.currentRound,
+                    bonus: SPEED_BONUS
+                  }
+                });
+              }
+              
+              // Add score to totalScore before marking finished
+              player.totalScore += player.score;
+              player.finished = true;
+              
+              console.log(`[Round via game_update] Player ${player.name} finished round ${room.currentRound} with score ${player.score}${speedBonusAwarded ? ' (includes speed bonus)' : ''}`);
+              
               broadcastToRoom(room, {
                 type: 'player_finished',
-                payload: { playerId, playerName: player.name }
+                payload: { playerId, playerName: player.name, score: player.score }
               });
+              
+              // Check if all connected active players have finished the round
+              const connectedPlayers = getConnectedActivePlayers(room);
+              const allFinished = connectedPlayers.length > 0 && connectedPlayers.every(p => p.finished);
+              
+              if (allFinished && room.status === 'playing') {
+                console.log(`[Round via game_update] All ${connectedPlayers.length} connected players finished! Transitioning to round_end`);
+                
+                // Clear the server-side timer
+                const existingTimer = roundTimers.get(roomCode);
+                if (existingTimer) {
+                  clearTimeout(existingTimer);
+                  roundTimers.delete(roomCode);
+                }
+                
+                room.status = 'round_end';
+                
+                // Check for elimination
+                const eliminatedPlayer = checkAndEliminatePlayer(room);
+                
+                if (eliminatedPlayer) {
+                  broadcastToRoom(room, {
+                    type: 'player_eliminated',
+                    payload: {
+                      playerId: eliminatedPlayer.id,
+                      playerName: eliminatedPlayer.name,
+                      round: room.currentRound,
+                      totalScore: eliminatedPlayer.totalScore
+                    }
+                  });
+                }
+                
+                // Check if game is over
+                if (checkGameOver(room)) {
+                  room.status = 'finished';
+                  const ranking = Array.from(room.players.values())
+                    .sort((a, b) => b.totalScore - a.totalScore)
+                    .map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      score: p.score,
+                      totalScore: p.totalScore,
+                      isEliminated: p.isEliminated,
+                      eliminatedInRound: p.eliminatedInRound
+                    }));
+                  
+                  broadcastToRoom(room, {
+                    type: 'game_over',
+                    payload: { ranking }
+                  });
+                } else {
+                  // Send round end to all players
+                  const standings = Array.from(room.players.values())
+                    .sort((a, b) => b.totalScore - a.totalScore)
+                    .map(p => ({
+                      id: p.id,
+                      name: p.name,
+                      score: p.score,
+                      totalScore: p.totalScore,
+                      isEliminated: p.isEliminated,
+                      eliminatedInRound: p.eliminatedInRound
+                    }));
+                  
+                  broadcastToRoom(room, {
+                    type: 'round_end',
+                    payload: {
+                      round: room.currentRound,
+                      standings,
+                      nextRound: room.currentRound + 1,
+                      nextRoundTime: getRoundTime(room.currentRound + 1, room.playerCount),
+                      eliminatedId: eliminatedPlayer?.id || null,
+                      eliminatedName: eliminatedPlayer?.name || null
+                    }
+                  });
+                }
+              }
             }
 
             for (const [pid, pl] of Array.from(room.players.entries())) {
