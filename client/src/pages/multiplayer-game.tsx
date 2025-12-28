@@ -347,9 +347,9 @@ export default function MultiplayerGamePage() {
       setHasFinishedRound(true);
       setCanSpectateWhileWaiting(true);
       
-      // Update own finished status in players list
+      // Update own finished status and totalScore in players list
       setPlayers(prev => prev.map(p => 
-        p.id === playerId ? { ...p, finished: true, score: state.score } : p
+        p.id === playerId ? { ...p, finished: true, score: state.score, totalScore: p.totalScore + state.score } : p
       ));
       
       const msg = {
