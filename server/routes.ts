@@ -378,13 +378,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         playerToRoom.set(playerId, roomCode);
         setContext(playerId, roomCode);
 
-        ws.send(JSON.stringify({
+        const roomCreatedMsg = JSON.stringify({
           type: 'room_created',
           payload: { 
             room: getRoomState(room),
             playerId 
           }
-        }));
+        });
+        console.log('[WS] Sending room_created to', playerId, '- ws.readyState:', ws.readyState);
+        ws.send(roomCreatedMsg);
+        console.log('[WS] room_created sent successfully');
         break;
       }
 
