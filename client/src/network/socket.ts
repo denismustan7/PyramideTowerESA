@@ -1,6 +1,11 @@
 let socket: WebSocket | null = null;
 let isConnected = false;
 let connectionCallbacks: Array<(sock: WebSocket) => void> = [];
+let messageHandler: ((data: any) => void) | null = null;
+
+export function setMessageHandler(handler: (data: any) => void) {
+  messageHandler = handler;
+}
 
 export function getSocket(): WebSocket {
   if (socket && socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
@@ -14,21 +19,36 @@ export function getSocket(): WebSocket {
   isConnected = false;
   socket = new WebSocket(wsUrl);
   
-  socket.addEventListener('open', () => {
+  socket.onopen = () => {
     console.log('[WebSocket] Connection opened');
     isConnected = true;
     connectionCallbacks.forEach(cb => cb(socket!));
     connectionCallbacks = [];
-  });
+  };
   
-  socket.addEventListener('error', (e) => {
+  socket.onmessage = (event: MessageEvent) => {
+    console.log('[WebSocket] Raw message received:', event.data.substring(0, 100));
+    try {
+      const data = JSON.parse(event.data);
+      console.log('[WebSocket] Parsed message type:', data.type);
+      if (messageHandler) {
+        messageHandler(data);
+      } else {
+        console.warn('[WebSocket] No message handler registered');
+      }
+    } catch (e) {
+      console.error('[WebSocket] Failed to parse message:', e);
+    }
+  };
+  
+  socket.onerror = (e) => {
     console.error('[WebSocket] Error:', e);
-  });
+  };
   
-  socket.addEventListener('close', (e) => {
+  socket.onclose = (e) => {
     console.log('[WebSocket] Connection closed:', e.code, e.reason);
     isConnected = false;
-  });
+  };
   
   return socket;
 }
@@ -69,4 +89,5 @@ export function resetSocket() {
   }
   isConnected = false;
   connectionCallbacks = [];
+  messageHandler = null;
 }

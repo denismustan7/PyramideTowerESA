@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getSocket, waitForConnection } from "@/network/socket";
+import { getSocket, waitForConnection, setMessageHandler } from "@/network/socket";
 import type { MultiplayerRoom, MultiplayerPlayer } from "@shared/schema";
 
 function MagicalParticles() {
@@ -73,25 +73,8 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
-  const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
-  const openHandlerRef = useRef<(() => void) | null>(null);
-  const closeHandlerRef = useRef<(() => void) | null>(null);
-
-  const setupSocketHandlers = useCallback((socket: WebSocket) => {
-    console.log('[Lobby] Setting up socket handlers, readyState:', socket.readyState);
-    
-    if (messageHandlerRef.current) {
-      socket.removeEventListener('message', messageHandlerRef.current);
-    }
-    if (openHandlerRef.current) {
-      socket.removeEventListener('open', openHandlerRef.current);
-    }
-    if (closeHandlerRef.current) {
-      socket.removeEventListener('close', closeHandlerRef.current);
-    }
-    
-    const handleMessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data);
+  useEffect(() => {
+    const handleMessage = (message: any) => {
       console.log('[Lobby] Received message:', message.type, message.payload);
       switch (message.type) {
         case 'room_created':
@@ -118,27 +101,11 @@ export default function LobbyPage() {
       }
     };
     
-    const handleOpen = () => {
-      console.log('[Lobby] WebSocket connected');
-      setWsConnected(true);
+    setMessageHandler(handleMessage);
+    
+    return () => {
+      setMessageHandler(() => {});
     };
-    
-    const handleClose = () => {
-      console.log('[Lobby] WebSocket closed');
-      setWsConnected(false);
-    };
-    
-    messageHandlerRef.current = handleMessage;
-    openHandlerRef.current = handleOpen;
-    closeHandlerRef.current = handleClose;
-    
-    socket.addEventListener('message', handleMessage);
-    socket.addEventListener('open', handleOpen);
-    socket.addEventListener('close', handleClose);
-    
-    if (socket.readyState === WebSocket.OPEN) {
-      setWsConnected(true);
-    }
   }, [setLocation, toast]);
 
   useEffect(() => {
@@ -151,8 +118,11 @@ export default function LobbyPage() {
     
     const socket = getSocket();
     socketRef.current = socket;
-    setupSocketHandlers(socket);
-  }, [setupSocketHandlers]);
+    
+    if (socket.readyState === WebSocket.OPEN) {
+      setWsConnected(true);
+    }
+  }, []);
 
   const sendMessage = (msg: object) => {
     const socket = socketRef.current;
@@ -176,7 +146,6 @@ export default function LobbyPage() {
     try {
       const socket = await waitForConnection();
       socketRef.current = socket;
-      setupSocketHandlers(socket);
       console.log('[Lobby] Sending create_room message');
       socket.send(JSON.stringify({
         type: 'create_room',
@@ -218,7 +187,6 @@ export default function LobbyPage() {
     try {
       const socket = await waitForConnection();
       socketRef.current = socket;
-      setupSocketHandlers(socket);
       socket.send(JSON.stringify({
         type: 'join_room',
         payload: { 
