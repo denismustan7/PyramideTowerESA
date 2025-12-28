@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Home, Pause, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { submitRun } from "@/lib/api";
 import { 
   initGame, 
   playCard, 
@@ -70,6 +70,7 @@ function MagicalParticles() {
 export default function GamePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [gameState, setGameState] = useState<GameState>(() => initGame(1));
   const [isPaused, setIsPaused] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
@@ -80,7 +81,21 @@ export default function GamePage() {
 
   const submitScore = useMutation({
     mutationFn: async ({ name, score }: { name: string; score: number }) => {
-      return apiRequest('POST', '/api/leaderboard', { playerName: name, score });
+      return submitRun({ name, points: score });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      toast({
+        title: "Score gespeichert!",
+        description: "Dein Ergebnis wurde zur Bestenliste hinzugefuegt.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Score konnte nicht gespeichert werden.",
+        variant: "destructive"
+      });
     }
   });
 

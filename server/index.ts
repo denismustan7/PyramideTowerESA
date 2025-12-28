@@ -12,6 +12,30 @@ declare module "http" {
   }
 }
 
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:5000',
+    'http://localhost:5173',
+    'http://46.224.150.169:5000',
+    'http://46.224.150.169'
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 app.use(
   express.json({
     verify: (req, _res, buf) => {

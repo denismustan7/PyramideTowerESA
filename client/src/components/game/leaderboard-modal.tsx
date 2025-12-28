@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, X, Globe, Crown, Medal } from "lucide-react";
+import { Trophy, X, Globe, Crown, Medal, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import type { LeaderboardEntry } from "@shared/schema";
+import { getLeaderboard, type LeaderboardEntry } from "@/lib/api";
 
 interface LeaderboardModalProps {
   isOpen: boolean;
@@ -14,9 +13,12 @@ const rankIcons = [Crown, Trophy, Medal];
 const rankColors = ["text-amber-400", "text-gray-300", "text-amber-600"];
 
 export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
-  const { data: entries = [], isLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: ['/api/leaderboard'],
-    enabled: isOpen
+  const { data: entries = [], isLoading, isError, refetch } = useQuery<LeaderboardEntry[]>({
+    queryKey: ['leaderboard'],
+    queryFn: getLeaderboard,
+    enabled: isOpen,
+    staleTime: 30000,
+    refetchOnMount: true,
   });
 
   const getMedalBg = (rank: number) => {
@@ -73,6 +75,20 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
             <div className="p-4 overflow-y-auto max-h-96">
               {isLoading ? (
                 <div className="text-center text-gray-400 py-8">Laden...</div>
+              ) : isError ? (
+                <div className="text-center text-gray-400 py-8">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-400 opacity-60" />
+                  <p>Fehler beim Laden</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => refetch()}
+                    className="mt-3 border-amber-500/30"
+                    data-testid="button-retry-leaderboard"
+                  >
+                    Erneut versuchen
+                  </Button>
+                </div>
               ) : entries.length === 0 ? (
                 <div className="text-center text-gray-400 py-8">
                   <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -87,7 +103,7 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
 
                     return (
                       <motion.div
-                        key={entry.id}
+                        key={`${entry.name}-${index}`}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
@@ -105,16 +121,13 @@ export function LeaderboardModal({ isOpen, onClose }: LeaderboardModalProps) {
 
                         {/* Player Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-white truncate">{entry.playerName}</div>
-                          <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400/80">
-                            {entry.rank}
-                          </Badge>
+                          <div className="font-semibold text-white truncate">{entry.name}</div>
                         </div>
 
                         {/* Score */}
                         <div className="text-right">
                           <div className={`font-bold ${isTopThree ? rankColors[index] : 'text-amber-400'}`}>
-                            {entry.score.toLocaleString()}
+                            {entry.points.toLocaleString()}
                           </div>
                         </div>
                       </motion.div>
