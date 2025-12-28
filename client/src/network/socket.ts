@@ -1,4 +1,6 @@
 let socket: WebSocket | null = null;
+let isConnected = false;
+let pendingCallbacks: Array<(sock: WebSocket) => void> = [];
 
 export function getSocket(): WebSocket {
   if (socket && socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
@@ -9,7 +11,24 @@ export function getSocket(): WebSocket {
   const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.host}/ws`;
   console.log('[WebSocket] Creating new connection to:', wsUrl);
   
+  isConnected = false;
   socket = new WebSocket(wsUrl);
+  
+  socket.onopen = () => {
+    console.log('[WebSocket] Connection opened');
+    isConnected = true;
+    pendingCallbacks.forEach(cb => cb(socket!));
+    pendingCallbacks = [];
+  };
+  
+  socket.onerror = (e) => {
+    console.error('[WebSocket] Error:', e);
+  };
+  
+  socket.onclose = (e) => {
+    console.log('[WebSocket] Connection closed:', e.code, e.reason);
+    isConnected = false;
+  };
   
   return socket;
 }
@@ -18,39 +37,28 @@ export function waitForConnection(): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const sock = getSocket();
     
-    console.log('[WebSocket] waitForConnection called, readyState:', sock.readyState);
+    console.log('[WebSocket] waitForConnection - readyState:', sock.readyState, 'isConnected:', isConnected);
     
-    if (sock.readyState === WebSocket.OPEN) {
-      console.log('[WebSocket] Already connected');
+    if (sock.readyState === WebSocket.OPEN || isConnected) {
+      console.log('[WebSocket] Already connected, resolving immediately');
       resolve(sock);
       return;
     }
     
     const timeout = setTimeout(() => {
       console.error('[WebSocket] Connection timeout after 10s');
-      sock.removeEventListener('open', onOpen);
-      sock.removeEventListener('error', onError);
+      const idx = pendingCallbacks.indexOf(onConnected);
+      if (idx > -1) pendingCallbacks.splice(idx, 1);
       reject(new Error('WebSocket connection timeout'));
     }, 10000);
     
-    const onOpen = () => {
-      console.log('[WebSocket] Connection established in waitForConnection');
+    const onConnected = (s: WebSocket) => {
+      console.log('[WebSocket] Connection callback fired');
       clearTimeout(timeout);
-      sock.removeEventListener('open', onOpen);
-      sock.removeEventListener('error', onError);
-      resolve(sock);
+      resolve(s);
     };
     
-    const onError = (e: Event) => {
-      console.error('[WebSocket] Connection error in waitForConnection');
-      clearTimeout(timeout);
-      sock.removeEventListener('open', onOpen);
-      sock.removeEventListener('error', onError);
-      reject(e);
-    };
-    
-    sock.addEventListener('open', onOpen);
-    sock.addEventListener('error', onError);
+    pendingCallbacks.push(onConnected);
   });
 }
 
@@ -59,4 +67,6 @@ export function resetSocket() {
     socket.close();
     socket = null;
   }
+  isConnected = false;
+  pendingCallbacks = [];
 }
