@@ -253,8 +253,14 @@ function checkGameOver(room: Room): boolean {
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  console.log('[WebSocket] Server started on path /ws');
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    console.log(`[WebSocket] New connection from ${clientIp} - ${userAgent}`);
+    
     let currentPlayerId: string | null = null;
     let currentRoomCode: string | null = null;
 

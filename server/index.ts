@@ -13,16 +13,11 @@ declare module "http" {
 }
 
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    'http://localhost:5000',
-    'http://localhost:5173',
-    'http://46.224.150.169:5000',
-    'http://46.224.150.169'
-  ];
-  
   const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin) {
     res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
   }
   
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
