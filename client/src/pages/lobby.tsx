@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getSocket } from "@/network/socket";
+import { getSocket, waitForConnection } from "@/network/socket";
 import type { MultiplayerRoom, MultiplayerPlayer } from "@shared/schema";
 
 function MagicalParticles() {
@@ -84,8 +84,9 @@ export default function LobbyPage() {
     const socket = getSocket();
     socketRef.current = socket;
 
-    socket.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       const message = JSON.parse(event.data);
+      console.log('[Lobby] Received message:', message.type);
       switch (message.type) {
         case 'room_created':
         case 'room_joined':
@@ -111,15 +112,28 @@ export default function LobbyPage() {
       }
     };
 
-    socket.onopen = () => setWsConnected(true);
-    socket.onclose = () => setWsConnected(false);
+    const handleOpen = () => {
+      console.log('[Lobby] WebSocket connected');
+      setWsConnected(true);
+    };
+    
+    const handleClose = () => {
+      console.log('[Lobby] WebSocket closed');
+      setWsConnected(false);
+    };
+
+    socket.addEventListener('message', handleMessage);
+    socket.addEventListener('open', handleOpen);
+    socket.addEventListener('close', handleClose);
     
     if (socket.readyState === WebSocket.OPEN) {
       setWsConnected(true);
     }
 
     return () => {
-      // NICHT socket.close() - Socket bleibt bestehen
+      socket.removeEventListener('message', handleMessage);
+      socket.removeEventListener('open', handleOpen);
+      socket.removeEventListener('close', handleClose);
     };
   }, [setLocation, toast]);
 
@@ -130,7 +144,7 @@ export default function LobbyPage() {
     }
   };
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (!playerName.trim()) {
       toast({
         title: "Name erforderlich",
@@ -141,13 +155,26 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
-    sendMessage({
-      type: 'create_room',
-      payload: { playerName: playerName.trim() }
-    });
+    
+    try {
+      const socket = await waitForConnection();
+      socketRef.current = socket;
+      socket.send(JSON.stringify({
+        type: 'create_room',
+        payload: { playerName: playerName.trim() }
+      }));
+    } catch (error) {
+      console.error('[Lobby] Connection failed:', error);
+      toast({
+        title: "Verbindungsfehler",
+        description: "Konnte keine Verbindung zum Server herstellen.",
+        variant: "destructive"
+      });
+      setIsConnecting(false);
+    }
   };
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     if (!playerName.trim()) {
       toast({
         title: "Name erforderlich",
@@ -167,13 +194,26 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
-    sendMessage({
-      type: 'join_room',
-      payload: { 
-        playerName: playerName.trim(),
-        roomCode: roomCode.toUpperCase().trim()
-      }
-    });
+    
+    try {
+      const socket = await waitForConnection();
+      socketRef.current = socket;
+      socket.send(JSON.stringify({
+        type: 'join_room',
+        payload: { 
+          playerName: playerName.trim(),
+          roomCode: roomCode.toUpperCase().trim()
+        }
+      }));
+    } catch (error) {
+      console.error('[Lobby] Connection failed:', error);
+      toast({
+        title: "Verbindungsfehler",
+        description: "Konnte keine Verbindung zum Server herstellen.",
+        variant: "destructive"
+      });
+      setIsConnecting(false);
+    }
   };
 
   const handleToggleReady = () => {
