@@ -290,9 +290,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const disconnectedRoomCode = currentRoomCode;
           
           // During active game, use longer timeout (60 seconds) to prevent accidental removal
-          // During lobby, use shorter timeout (10 seconds)
+          // During lobby, use 60 seconds too to handle mobile Safari disconnects
           const isGameActive = room.status === 'playing' || room.status === 'round_end';
-          const timeout = isGameActive ? 60000 : 10000;
+          const timeout = isGameActive ? 60000 : 60000;
           
           console.log(`[WS] Player ${disconnectedPlayerId} disconnected from room ${disconnectedRoomCode} (status: ${room.status}), waiting ${timeout/1000}s for reconnect...`);
           
@@ -400,14 +400,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const room = rooms.get(roomCode);
 
         if (!room) {
-          ws.send(JSON.stringify({
+          console.log(`[WS] Room ${roomCode} not found, sending error to client`);
+          const errorMsg = JSON.stringify({
             type: 'error',
             payload: { message: 'Raum nicht gefunden' }
-          }));
+          });
+          ws.send(errorMsg);
+          console.log(`[WS] Error sent: ${errorMsg}`);
           return;
         }
 
         if (room.status !== 'waiting') {
+          console.log(`[WS] Room ${roomCode} already started, sending error`);
           ws.send(JSON.stringify({
             type: 'error',
             payload: { message: 'Spiel bereits gestartet' }
@@ -416,6 +420,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
 
         if (room.players.size >= room.maxPlayers) {
+          console.log(`[WS] Room ${roomCode} is full, sending error`);
           ws.send(JSON.stringify({
             type: 'error',
             payload: { message: 'Raum ist voll' }
