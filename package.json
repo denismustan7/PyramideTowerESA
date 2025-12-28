@@ -111,7 +111,7 @@
 }
 "scripts": {
   "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-  "dev:server": "cd server && tsx watch index.ts",
+  "dev:server": "cd server && tsx watch index.ts"",
   "dev:client": "cd client && vite",
   "build": "npm run build:client && npm run build:server",
   "build:client": "cd client && vite build",
