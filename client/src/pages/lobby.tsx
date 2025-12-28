@@ -7,6 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  ensureConnected, 
+  send, 
+  addMessageHandler, 
+  setCredentials, 
+  clearCredentials,
+  isConnected,
+  resetReconnectAttempts
+} from "@/lib/ws";
 import type { MultiplayerRoom, MultiplayerPlayer } from "@shared/schema";
 
 function MagicalParticles() {
@@ -67,62 +76,19 @@ export default function LobbyPage() {
   const [roomCode, setRoomCode] = useState('');
   const [room, setRoom] = useState<MultiplayerRoom | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [wsConnected, setWsConnected] = useState(isConnected());
   const [isConnecting, setIsConnecting] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Check for invite link parameter on load
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const joinCode = urlParams.get('join');
-    if (joinCode) {
-      setRoomCode(joinCode.toUpperCase());
-      setView('joining');
-    }
-  }, []);
-
-  const connectWebSocket = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const socket = new WebSocket(wsUrl);
-    
-    socket.onopen = () => {
-      setIsConnecting(false);
-    };
-
-    socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        handleWSMessage(message);
-      } catch (e) {
-        console.error('Failed to parse WS message:', e);
-      }
-    };
-
-    socket.onerror = () => {
-      toast({
-        title: "Verbindungsfehler",
-        description: "Konnte keine Verbindung zum Server herstellen.",
-        variant: "destructive"
-      });
-      setIsConnecting(false);
-    };
-
-    socket.onclose = () => {
-      setWs(null);
-    };
-
-    setWs(socket);
-    return socket;
-  }, [toast]);
-
-  const handleWSMessage = (message: { type: string; payload?: any }) => {
+  const handleWSMessage = useCallback((message: { type: string; payload?: any }) => {
     switch (message.type) {
       case 'room_created':
       case 'room_joined':
         setRoom(message.payload.room);
         setPlayerId(message.payload.playerId);
+        setCredentials(message.payload.playerId, message.payload.room.code);
         setView('waiting');
+        setIsConnecting(false);
         break;
       case 'room_update':
         setRoom(message.payload.room);
@@ -139,17 +105,30 @@ export default function LobbyPage() {
         setIsConnecting(false);
         break;
     }
-  };
+  }, [setLocation, toast]);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode = urlParams.get('join');
+    if (joinCode) {
+      setRoomCode(joinCode.toUpperCase());
+      setView('joining');
+    }
+    
+    resetReconnectAttempts();
+    const removeHandler = addMessageHandler(handleWSMessage);
+    
+    const checkConnection = setInterval(() => {
+      setWsConnected(isConnected());
+    }, 1000);
+    
     return () => {
-      if (ws) {
-        ws.close();
-      }
+      removeHandler();
+      clearInterval(checkConnection);
     };
-  }, [ws]);
+  }, [handleWSMessage]);
 
-  const handleCreateRoom = () => {
+  const handleCreateRoom = async () => {
     if (!playerName.trim()) {
       toast({
         title: "Name erforderlich",
@@ -160,17 +139,23 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
-    const socket = connectWebSocket();
-    
-    socket.onopen = () => {
-      socket.send(JSON.stringify({
+    try {
+      await ensureConnected();
+      send({
         type: 'create_room',
         payload: { playerName: playerName.trim() }
-      }));
-    };
+      });
+    } catch (e) {
+      toast({
+        title: "Verbindungsfehler",
+        description: "Konnte keine Verbindung zum Server herstellen.",
+        variant: "destructive"
+      });
+      setIsConnecting(false);
+    }
   };
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
     if (!playerName.trim()) {
       toast({
         title: "Name erforderlich",
@@ -190,45 +175,45 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
-    const socket = connectWebSocket();
-    
-    socket.onopen = () => {
-      socket.send(JSON.stringify({
+    try {
+      await ensureConnected();
+      send({
         type: 'join_room',
         payload: { 
           playerName: playerName.trim(),
           roomCode: roomCode.toUpperCase().trim()
         }
-      }));
-    };
+      });
+    } catch (e) {
+      toast({
+        title: "Verbindungsfehler",
+        description: "Konnte keine Verbindung zum Server herstellen.",
+        variant: "destructive"
+      });
+      setIsConnecting(false);
+    }
   };
 
   const handleToggleReady = () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'set_ready',
-        payload: { playerId }
-      }));
-    }
+    send({
+      type: 'set_ready',
+      payload: { playerId }
+    });
   };
 
   const handleStartGame = () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'start_game',
-        payload: { playerId }
-      }));
-    }
+    send({
+      type: 'start_game',
+      payload: { playerId }
+    });
   };
 
   const handleLeaveRoom = () => {
-    if (ws) {
-      ws.send(JSON.stringify({
-        type: 'leave_room',
-        payload: { playerId }
-      }));
-      ws.close();
-    }
+    send({
+      type: 'leave_room',
+      payload: { playerId }
+    });
+    clearCredentials();
     setRoom(null);
     setPlayerId(null);
     setView('menu');

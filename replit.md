@@ -33,7 +33,8 @@ A Tri-Peaks Solitaire card game for 1-6 players with real-time multiplayer suppo
 
 ### Frontend (`client/src/`)
 - `App.tsx` - Main app with routing and providers
-- `lib/gameContext.tsx` - WebSocket connection and game state management
+- `lib/ws.ts` - Global WebSocket singleton (persists across route changes)
+- `lib/api.ts` - REST API client for leaderboard
 - `pages/`
   - `home.tsx` - Home page with solo/multiplayer options and rules
   - `lobby.tsx` - Waiting room with player list and ready system
@@ -51,7 +52,8 @@ A Tri-Peaks Solitaire card game for 1-6 players with real-time multiplayer suppo
 
 ### Backend (`server/`)
 - `routes.ts` - WebSocket server and REST API
-- `storage.ts` - In-memory storage for rooms, games, leaderboard
+- `storage.ts` - In-memory storage for rooms, games
+- `db.ts` - SQLite database for persistent leaderboard (data/leaderboard.db)
 
 ### Shared (`shared/`)
 - `schema.ts` - Type definitions for Room, Player, Game, Cards, Events, and game constants
@@ -100,4 +102,16 @@ A Tri-Peaks Solitaire card game for 1-6 players with real-time multiplayer suppo
 - Framer Motion for animations
 - Tailwind CSS + shadcn/ui
 - Express + WebSocket (ws)
-- In-memory storage
+- SQLite (better-sqlite3) for persistent leaderboard
+- In-memory storage for game rooms
+
+## WebSocket Architecture
+- **Singleton Pattern**: `client/src/lib/ws.ts` maintains a single WebSocket connection
+- Connection persists across page navigation (Lobby → Game)
+- Automatic reconnection with exponential backoff (max 10 attempts)
+- Credentials stored for auto-rejoin on reconnect
+- No socket.close() on component cleanup - socket survives route changes
+
+## REST API Endpoints
+- `POST /api/run` - Submit score `{ name: string, points: number }`
+- `GET /api/leaderboard` - Get top 10 `[{ name, points }]`

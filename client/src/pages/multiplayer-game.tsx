@@ -18,6 +18,14 @@ import {
   getRank,
   hasValidMoves
 } from "@/lib/gameEngine";
+import { 
+  ensureConnected, 
+  send, 
+  addMessageHandler, 
+  setCredentials,
+  clearCredentials,
+  isConnected 
+} from "@/lib/ws";
 import { INVALID_MOVE_PENALTY } from "@shared/schema";
 import type { GameState } from "@shared/schema";
 import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
@@ -132,9 +140,9 @@ export default function MultiplayerGamePage() {
   const [hasFinishedRound, setHasFinishedRound] = useState(false);
   const [canSpectateWhileWaiting, setCanSpectateWhileWaiting] = useState(false);
   const [timerEnded, setTimerEnded] = useState(false);
+  const [wsConnected, setWsConnected] = useState(isConnected());
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const timerEndedStateRef = useRef<GameState | null>(null);
 
   useEffect(() => {
@@ -143,40 +151,42 @@ export default function MultiplayerGamePage() {
       return;
     }
 
-    // Initialize game with seed from URL (first round only)
     const initialState = initGameWithSeed(1, initialSeed);
     initialState.totalTime = initialRoundTime;
     initialState.timeRemaining = initialRoundTime;
     setGameState(initialState);
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const socket = new WebSocket(wsUrl);
+    setCredentials(playerId, roomCode);
     
-    socket.onopen = () => {
-      socket.send(JSON.stringify({
-        type: 'rejoin_game',
-        payload: { roomCode, playerId }
-      }));
-    };
-
-    socket.onmessage = (event) => {
+    const removeHandler = addMessageHandler(handleWSMessage);
+    
+    const connectAndRejoin = async () => {
       try {
-        const message = JSON.parse(event.data);
-        handleWSMessage(message);
+        await ensureConnected();
+        send({
+          type: 'rejoin_game',
+          payload: { roomCode, playerId }
+        });
       } catch (e) {
-        console.error('Failed to parse WS message:', e);
+        console.error('Failed to connect:', e);
+        toast({
+          title: "Verbindungsfehler",
+          description: "Versuche erneut zu verbinden...",
+          variant: "destructive"
+        });
       }
     };
-
-    wsRef.current = socket;
+    
+    connectAndRejoin();
+    
+    const checkConnection = setInterval(() => {
+      setWsConnected(isConnected());
+    }, 1000);
 
     return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
+      removeHandler();
+      clearInterval(checkConnection);
     };
-    // Only run on mount - subsequent rounds are handled by round_started message
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -319,8 +329,8 @@ export default function MultiplayerGamePage() {
   };
 
   const sendGameUpdate = useCallback((state: GameState) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
-      wsRef.current.send(JSON.stringify({
+    if (!isEliminated) {
+      send({
         type: 'game_update',
         payload: {
           playerId,
@@ -329,7 +339,7 @@ export default function MultiplayerGamePage() {
           cardsRemaining: state.cardsRemaining,
           finished: state.phase === 'won'
         }
-      }));
+      });
       
       setPlayers(prev => {
         const updated = prev.map(p => 
@@ -343,11 +353,10 @@ export default function MultiplayerGamePage() {
   }, [playerId, roomCode, isEliminated]);
 
   const sendRoundFinished = useCallback((state: GameState, finishReason: 'won' | 'time' | 'no_moves') => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated && !hasFinishedRound) {
+    if (!isEliminated && !hasFinishedRound) {
       setHasFinishedRound(true);
       setCanSpectateWhileWaiting(true);
       
-      // Update own finished status and totalScore in players list
       setPlayers(prev => prev.map(p => 
         p.id === playerId ? { ...p, finished: true, score: state.score, totalScore: p.totalScore + state.score } : p
       ));
@@ -363,9 +372,8 @@ export default function MultiplayerGamePage() {
         }
       };
       console.log(`[WS] Sending: round_finished`, msg.payload);
-      wsRef.current.send(JSON.stringify(msg));
+      send(msg);
       
-      // Show toast based on finish reason
       if (finishReason === 'won') {
         toast({
           title: "Alle Karten abgeräumt!",
@@ -420,22 +428,21 @@ export default function MultiplayerGamePage() {
   }, [timerEnded, hasFinishedRound, sendRoundFinished]);
 
   const handleReadyForNextRound = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && !isEliminated) {
-      wsRef.current.send(JSON.stringify({
+    if (!isEliminated) {
+      send({
         type: 'ready_for_next_round',
         payload: { playerId, roomCode }
-      }));
+      });
       setIsReady(true);
     }
   }, [playerId, roomCode, isEliminated]);
 
   const handleSpectatePlayer = useCallback((targetPlayerId: string) => {
-    // Allow spectating if eliminated OR if finished round but waiting for others
-    if (wsRef.current?.readyState === WebSocket.OPEN && (isEliminated || canSpectateWhileWaiting)) {
-      wsRef.current.send(JSON.stringify({
+    if (isEliminated || canSpectateWhileWaiting) {
+      send({
         type: 'spectate_player',
         payload: { targetPlayerId }
-      }));
+      });
       setIsSpectating(true);
       setSpectatingPlayerId(targetPlayerId);
       const targetPlayer = players.find(p => p.id === targetPlayerId);
@@ -565,9 +572,7 @@ export default function MultiplayerGamePage() {
   }, [gameState, selectedCardId, sendGameUpdate, sendRoundFinished, isEliminated, hasFinishedRound]);
 
   const handleGoHome = () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
+    clearCredentials();
     setLocation("/");
   };
 
