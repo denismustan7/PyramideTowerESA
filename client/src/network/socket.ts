@@ -1,6 +1,6 @@
 let socket: WebSocket | null = null;
 let isConnected = false;
-let pendingCallbacks: Array<(sock: WebSocket) => void> = [];
+let connectionCallbacks: Array<(sock: WebSocket) => void> = [];
 
 export function getSocket(): WebSocket {
   if (socket && socket.readyState !== WebSocket.CLOSED && socket.readyState !== WebSocket.CLOSING) {
@@ -14,21 +14,21 @@ export function getSocket(): WebSocket {
   isConnected = false;
   socket = new WebSocket(wsUrl);
   
-  socket.onopen = () => {
+  socket.addEventListener('open', () => {
     console.log('[WebSocket] Connection opened');
     isConnected = true;
-    pendingCallbacks.forEach(cb => cb(socket!));
-    pendingCallbacks = [];
-  };
+    connectionCallbacks.forEach(cb => cb(socket!));
+    connectionCallbacks = [];
+  });
   
-  socket.onerror = (e) => {
+  socket.addEventListener('error', (e) => {
     console.error('[WebSocket] Error:', e);
-  };
+  });
   
-  socket.onclose = (e) => {
+  socket.addEventListener('close', (e) => {
     console.log('[WebSocket] Connection closed:', e.code, e.reason);
     isConnected = false;
-  };
+  });
   
   return socket;
 }
@@ -47,8 +47,8 @@ export function waitForConnection(): Promise<WebSocket> {
     
     const timeout = setTimeout(() => {
       console.error('[WebSocket] Connection timeout after 10s');
-      const idx = pendingCallbacks.indexOf(onConnected);
-      if (idx > -1) pendingCallbacks.splice(idx, 1);
+      const idx = connectionCallbacks.indexOf(onConnected);
+      if (idx > -1) connectionCallbacks.splice(idx, 1);
       reject(new Error('WebSocket connection timeout'));
     }, 10000);
     
@@ -58,7 +58,7 @@ export function waitForConnection(): Promise<WebSocket> {
       resolve(s);
     };
     
-    pendingCallbacks.push(onConnected);
+    connectionCallbacks.push(onConnected);
   });
 }
 
@@ -68,5 +68,5 @@ export function resetSocket() {
     socket = null;
   }
   isConnected = false;
-  pendingCallbacks = [];
+  connectionCallbacks = [];
 }

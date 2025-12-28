@@ -73,12 +73,26 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
+  const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
+  const openHandlerRef = useRef<(() => void) | null>(null);
+  const closeHandlerRef = useRef<(() => void) | null>(null);
+
   const setupSocketHandlers = useCallback((socket: WebSocket) => {
-    console.log('[Lobby] Setting up socket handlers');
+    console.log('[Lobby] Setting up socket handlers, readyState:', socket.readyState);
     
-    socket.onmessage = (event: MessageEvent) => {
+    if (messageHandlerRef.current) {
+      socket.removeEventListener('message', messageHandlerRef.current);
+    }
+    if (openHandlerRef.current) {
+      socket.removeEventListener('open', openHandlerRef.current);
+    }
+    if (closeHandlerRef.current) {
+      socket.removeEventListener('close', closeHandlerRef.current);
+    }
+    
+    const handleMessage = (event: MessageEvent) => {
       const message = JSON.parse(event.data);
-      console.log('[Lobby] Received message:', message.type);
+      console.log('[Lobby] Received message:', message.type, message.payload);
       switch (message.type) {
         case 'room_created':
         case 'room_joined':
@@ -104,19 +118,23 @@ export default function LobbyPage() {
       }
     };
     
-    const prevOnOpen = socket.onopen;
-    socket.onopen = (e) => {
+    const handleOpen = () => {
       console.log('[Lobby] WebSocket connected');
       setWsConnected(true);
-      if (prevOnOpen) prevOnOpen.call(socket, e);
     };
     
-    const prevOnClose = socket.onclose;
-    socket.onclose = (e) => {
+    const handleClose = () => {
       console.log('[Lobby] WebSocket closed');
       setWsConnected(false);
-      if (prevOnClose) prevOnClose.call(socket, e);
     };
+    
+    messageHandlerRef.current = handleMessage;
+    openHandlerRef.current = handleOpen;
+    closeHandlerRef.current = handleClose;
+    
+    socket.addEventListener('message', handleMessage);
+    socket.addEventListener('open', handleOpen);
+    socket.addEventListener('close', handleClose);
     
     if (socket.readyState === WebSocket.OPEN) {
       setWsConnected(true);
