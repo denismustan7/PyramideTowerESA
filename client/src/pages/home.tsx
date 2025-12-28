@@ -49,7 +49,6 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showRules, setShowRules] = useState(false);
-  const [rulesTab, setRulesTab] = useState<'2-4' | '5-6'>('2-4');
 
   const handleSoloPlay = () => {
     setLocation("/game");
@@ -177,31 +176,6 @@ export default function HomePage() {
                     Spielregeln
                   </DialogTitle>
                 </DialogHeader>
-                
-                <div className="flex gap-2 mb-4 flex-shrink-0">
-                  <Button
-                    size="sm"
-                    variant={rulesTab === '2-4' ? 'default' : 'outline'}
-                    onClick={() => setRulesTab('2-4')}
-                    className={rulesTab === '2-4' 
-                      ? 'flex-1 bg-amber-600 hover:bg-amber-500 text-white' 
-                      : 'flex-1 border-amber-500/40 text-amber-400 hover:bg-amber-500/10'}
-                    data-testid="button-rules-2-4"
-                  >
-                    2-4 Spieler
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={rulesTab === '5-6' ? 'default' : 'outline'}
-                    onClick={() => setRulesTab('5-6')}
-                    className={rulesTab === '5-6' 
-                      ? 'flex-1 bg-cyan-600 hover:bg-cyan-500 text-white' 
-                      : 'flex-1 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10'}
-                    data-testid="button-rules-5-6"
-                  >
-                    5-6 Spieler
-                  </Button>
-                </div>
 
                 <div className="text-gray-300 space-y-4 overflow-y-auto flex-1 pr-2">
                   <section>
@@ -230,64 +204,37 @@ export default function HomePage() {
                     </ul>
                   </section>
 
-                  {rulesTab === '2-4' ? (
-                    <section className="border-t border-amber-500/20 pt-4">
-                      <h3 className="text-amber-300 font-semibold mb-2">Multiplayer (2-4 Spieler)</h3>
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Runden & Zeit</h4>
-                          <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>10 Runden insgesamt</li>
-                            <li>Runden 1-2: 75 Sekunden</li>
-                            <li>Runden 3-5: 70 Sekunden</li>
-                            <li>Ab Runde 6: -3 Sekunden pro Runde</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Elimination</h4>
-                          <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>2 Spieler: Ab Runde 9</li>
-                            <li>3 Spieler: Ab Runde 8</li>
-                            <li>4 Spieler: Ab Runde 7</li>
-                            <li>Letzter Platz wird eliminiert</li>
-                            <li>Am Ende spielt nur einer Runde 10</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Speed Bonus</h4>
-                          <p className="text-sm">+1000 Punkte fur den ersten Spieler, der alle Karten abraumt!</p>
-                        </div>
+                  <section className="border-t border-amber-500/20 pt-4">
+                    <h3 className="text-amber-300 font-semibold mb-2">Multiplayer (1-6 Spieler)</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="text-cyan-300 text-sm font-medium mb-1">Runden & Zeit</h4>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          <li>10 Runden insgesamt</li>
+                          <li>Runden 1-2: 75 Sekunden</li>
+                          <li>Runden 3-5: 70 Sekunden</li>
+                          <li>Ab Runde 6: -3 Sekunden pro Runde (67s, 64s, 61s, 58s, 55s)</li>
+                        </ul>
                       </div>
-                    </section>
-                  ) : (
-                    <section className="border-t border-cyan-500/20 pt-4">
-                      <h3 className="text-cyan-300 font-semibold mb-2">Multiplayer (5-6 Spieler)</h3>
-                      <div className="space-y-3">
-                        <div>
-                          <h4 className="text-amber-300 text-sm font-medium mb-1">Runden & Zeit</h4>
-                          <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>10 Runden insgesamt</li>
-                            <li>Runden 1-2: 75 Sekunden</li>
-                            <li>Runden 3-5: 70 Sekunden</li>
-                            <li>Ab Runde 6: -3 Sekunden pro Runde</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="text-amber-300 text-sm font-medium mb-1">Elimination</h4>
-                          <ul className="list-disc list-inside space-y-1 text-sm">
-                            <li>5 Spieler: Ab Runde 6</li>
-                            <li>6 Spieler: Ab Runde 5</li>
-                            <li>Letzter Platz wird eliminiert</li>
-                            <li>Am Ende spielt nur einer Runde 10</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h4 className="text-cyan-300 text-sm font-medium mb-1">Speed Bonus</h4>
-                          <p className="text-sm">+1000 Punkte fur den ersten Spieler, der alle Karten abraumt!</p>
-                        </div>
+                      <div>
+                        <h4 className="text-cyan-300 text-sm font-medium mb-1">Schwierigkeit</h4>
+                        <p className="text-sm">Jede Runde hat eine zufallige Schwierigkeit (Einfach, Medium, Schwer) - fur alle Spieler gleich.</p>
                       </div>
-                    </section>
-                  )}
+                      <div>
+                        <h4 className="text-cyan-300 text-sm font-medium mb-1">Elimination</h4>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          <li>Eliminierung beginnt ab Runde (11 - Spieleranzahl)</li>
+                          <li>Der letzte Platz wird jede Runde eliminiert</li>
+                          <li>Am Ende spielt nur ein Spieler Runde 10</li>
+                          <li>Eliminierte Spieler konnen zuschauen</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="text-cyan-300 text-sm font-medium mb-1">Speed Bonus</h4>
+                        <p className="text-sm">+1000 Punkte fur den ersten Spieler, der alle Karten abraumt!</p>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               </DialogContent>
             </Dialog>
