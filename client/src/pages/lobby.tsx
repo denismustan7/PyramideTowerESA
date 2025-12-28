@@ -73,18 +73,10 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const joinCode = urlParams.get('join');
-    if (joinCode) {
-      setRoomCode(joinCode.toUpperCase());
-      setView('joining');
-    }
+  const setupSocketHandlers = useCallback((socket: WebSocket) => {
+    console.log('[Lobby] Setting up socket handlers');
     
-    const socket = getSocket();
-    socketRef.current = socket;
-
-    const handleMessage = (event: MessageEvent) => {
+    socket.onmessage = (event: MessageEvent) => {
       const message = JSON.parse(event.data);
       console.log('[Lobby] Received message:', message.type);
       switch (message.type) {
@@ -111,31 +103,38 @@ export default function LobbyPage() {
           break;
       }
     };
-
-    const handleOpen = () => {
+    
+    const prevOnOpen = socket.onopen;
+    socket.onopen = (e) => {
       console.log('[Lobby] WebSocket connected');
       setWsConnected(true);
+      if (prevOnOpen) prevOnOpen.call(socket, e);
     };
     
-    const handleClose = () => {
+    const prevOnClose = socket.onclose;
+    socket.onclose = (e) => {
       console.log('[Lobby] WebSocket closed');
       setWsConnected(false);
+      if (prevOnClose) prevOnClose.call(socket, e);
     };
-
-    socket.addEventListener('message', handleMessage);
-    socket.addEventListener('open', handleOpen);
-    socket.addEventListener('close', handleClose);
     
     if (socket.readyState === WebSocket.OPEN) {
       setWsConnected(true);
     }
-
-    return () => {
-      socket.removeEventListener('message', handleMessage);
-      socket.removeEventListener('open', handleOpen);
-      socket.removeEventListener('close', handleClose);
-    };
   }, [setLocation, toast]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode = urlParams.get('join');
+    if (joinCode) {
+      setRoomCode(joinCode.toUpperCase());
+      setView('joining');
+    }
+    
+    const socket = getSocket();
+    socketRef.current = socket;
+    setupSocketHandlers(socket);
+  }, [setupSocketHandlers]);
 
   const sendMessage = (msg: object) => {
     const socket = socketRef.current;
@@ -159,6 +158,7 @@ export default function LobbyPage() {
     try {
       const socket = await waitForConnection();
       socketRef.current = socket;
+      setupSocketHandlers(socket);
       console.log('[Lobby] Sending create_room message');
       socket.send(JSON.stringify({
         type: 'create_room',
@@ -200,6 +200,7 @@ export default function LobbyPage() {
     try {
       const socket = await waitForConnection();
       socketRef.current = socket;
+      setupSocketHandlers(socket);
       socket.send(JSON.stringify({
         type: 'join_room',
         payload: { 
