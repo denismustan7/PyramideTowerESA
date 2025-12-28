@@ -241,22 +241,66 @@ export default function LobbyPage() {
     setView('menu');
   };
 
-  const copyRoomCode = () => {
-    if (room) {
-      navigator.clipboard.writeText(room.code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        // Fall through to fallback
+      }
+    }
+    // Fallback for HTTP / older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return true;
+    } catch {
+      document.body.removeChild(textArea);
+      return false;
     }
   };
 
-  const copyInviteLink = () => {
+  const copyRoomCode = async () => {
+    if (room) {
+      const success = await copyToClipboard(room.code);
+      if (success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } else {
+        toast({
+          title: "Kopieren fehlgeschlagen",
+          description: `Code: ${room.code}`,
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const copyInviteLink = async () => {
     if (room) {
       const inviteUrl = `${window.location.origin}/lobby?join=${room.code}`;
-      navigator.clipboard.writeText(inviteUrl);
-      toast({
-        title: "Link kopiert!",
-        description: "Einladungslink wurde in die Zwischenablage kopiert.",
-      });
+      const success = await copyToClipboard(inviteUrl);
+      if (success) {
+        toast({
+          title: "Link kopiert!",
+          description: "Einladungslink wurde in die Zwischenablage kopiert.",
+        });
+      } else {
+        toast({
+          title: "Kopieren fehlgeschlagen",
+          description: inviteUrl,
+          variant: "destructive"
+        });
+      }
     }
   };
 
