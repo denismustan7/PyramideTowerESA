@@ -26,7 +26,6 @@ import { GameHUD } from "@/components/game/game-hud";
 import { DrawArea } from "@/components/game/draw-area";
 import { LiveScoreboard } from "@/components/game/live-scoreboard";
 import { RoundTransitionOverlay } from "@/components/game/round-transition-overlay";
-import { SpectatorBar } from "@/components/game/spectator-bar";
 
 interface PlayerState {
   id: string;
@@ -596,15 +595,6 @@ export default function MultiplayerGamePage() {
     >
       <MagicalParticles />
 
-      {(isSpectating || canSpectateWhileWaiting) && (
-        <SpectatorBar
-          activePlayers={activePlayers.filter(p => !p.finished)}
-          spectatingPlayerId={spectatingPlayerId}
-          spectatingPlayerName={spectatingPlayerName}
-          onSwitchPlayer={handleSpectatePlayer}
-          isWaitingMode={hasFinishedRound && !isEliminated}
-        />
-      )}
 
       <GameHUD
         score={gameState.score}

@@ -248,7 +248,11 @@ function checkAndEliminatePlayer(room: Room): RoomPlayer | null {
 
 function checkGameOver(room: Room): boolean {
   const activePlayers = getActivePlayers(room);
-  return activePlayers.length <= 1 || room.currentRound >= room.totalRounds;
+  // Game ends AFTER round 10 is completed, or if no active players remain
+  // Winner should always play round 10, even if they're the only one left
+  if (activePlayers.length === 0) return true;
+  if (room.currentRound >= room.totalRounds) return true;
+  return false;
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {

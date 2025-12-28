@@ -1,9 +1,19 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 
 const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'leaderboard.db');
 
+// Ensure the data directory exists
+const dataDir = path.dirname(dbPath);
+if (!fs.existsSync(dataDir)) {
+  console.log(`[DB] Creating data directory: ${dataDir}`);
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+console.log(`[DB] Opening database at: ${dbPath}`);
 const db = new Database(dbPath);
+console.log(`[DB] Database opened successfully`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS runs (
