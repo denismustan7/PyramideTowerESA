@@ -18,14 +18,7 @@ import {
   getRank,
   hasValidMoves
 } from "@/lib/gameEngine";
-import { 
-  ensureConnected, 
-  send, 
-  addMessageHandler, 
-  setCredentials,
-  clearCredentials,
-  isConnected 
-} from "@/lib/ws";
+import { getSocket } from "@/network/socket";
 import { INVALID_MOVE_PENALTY } from "@shared/schema";
 import type { GameState } from "@shared/schema";
 import { TriPeaksTowers } from "@/components/game/tri-peaks-towers";
@@ -140,10 +133,18 @@ export default function MultiplayerGamePage() {
   const [hasFinishedRound, setHasFinishedRound] = useState(false);
   const [canSpectateWhileWaiting, setCanSpectateWhileWaiting] = useState(false);
   const [timerEnded, setTimerEnded] = useState(false);
-  const [wsConnected, setWsConnected] = useState(isConnected());
+  const [wsConnected, setWsConnected] = useState(false);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const timerEndedStateRef = useRef<GameState | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+
+  const sendMessage = useCallback((msg: object) => {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(msg));
+    }
+  }, []);
 
   useEffect(() => {
     if (!initialSeed) {
@@ -156,36 +157,40 @@ export default function MultiplayerGamePage() {
     initialState.timeRemaining = initialRoundTime;
     setGameState(initialState);
 
-    setCredentials(playerId, roomCode);
-    
-    const removeHandler = addMessageHandler(handleWSMessage);
-    
-    const connectAndRejoin = async () => {
-      try {
-        await ensureConnected();
-        send({
-          type: 'rejoin_game',
-          payload: { roomCode, playerId }
-        });
-      } catch (e) {
-        console.error('Failed to connect:', e);
-        toast({
-          title: "Verbindungsfehler",
-          description: "Versuche erneut zu verbinden...",
-          variant: "destructive"
-        });
-      }
+    const socket = getSocket();
+    socketRef.current = socket;
+
+    const handleMessage = (event: MessageEvent) => {
+      const message = JSON.parse(event.data);
+      handleWSMessage(message);
     };
-    
-    connectAndRejoin();
-    
-    const checkConnection = setInterval(() => {
-      setWsConnected(isConnected());
-    }, 1000);
+
+    const handleOpen = () => {
+      setWsConnected(true);
+      socket.send(JSON.stringify({
+        type: 'rejoin_game',
+        payload: { roomCode, playerId }
+      }));
+    };
+
+    const handleClose = () => setWsConnected(false);
+
+    socket.addEventListener('message', handleMessage);
+    socket.addEventListener('open', handleOpen);
+    socket.addEventListener('close', handleClose);
+
+    if (socket.readyState === WebSocket.OPEN) {
+      setWsConnected(true);
+      socket.send(JSON.stringify({
+        type: 'rejoin_game',
+        payload: { roomCode, playerId }
+      }));
+    }
 
     return () => {
-      removeHandler();
-      clearInterval(checkConnection);
+      socket.removeEventListener('message', handleMessage);
+      socket.removeEventListener('open', handleOpen);
+      socket.removeEventListener('close', handleClose);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -330,7 +335,7 @@ export default function MultiplayerGamePage() {
 
   const sendGameUpdate = useCallback((state: GameState) => {
     if (!isEliminated) {
-      send({
+      sendMessage({
         type: 'game_update',
         payload: {
           playerId,
@@ -350,7 +355,7 @@ export default function MultiplayerGamePage() {
         return updated;
       });
     }
-  }, [playerId, roomCode, isEliminated]);
+  }, [playerId, roomCode, isEliminated, sendMessage]);
 
   const sendRoundFinished = useCallback((state: GameState, finishReason: 'won' | 'time' | 'no_moves') => {
     if (!isEliminated && !hasFinishedRound) {
@@ -372,7 +377,7 @@ export default function MultiplayerGamePage() {
         }
       };
       console.log(`[WS] Sending: round_finished`, msg.payload);
-      send(msg);
+      sendMessage(msg);
       
       if (finishReason === 'won') {
         toast({
@@ -391,7 +396,7 @@ export default function MultiplayerGamePage() {
         });
       }
     }
-  }, [playerId, roomCode, isEliminated, hasFinishedRound, toast]);
+  }, [playerId, roomCode, isEliminated, hasFinishedRound, toast, sendMessage]);
 
   // Timer effect - must be after sendRoundFinished is defined
   useEffect(() => {
@@ -429,17 +434,17 @@ export default function MultiplayerGamePage() {
 
   const handleReadyForNextRound = useCallback(() => {
     if (!isEliminated) {
-      send({
+      sendMessage({
         type: 'ready_for_next_round',
         payload: { playerId, roomCode }
       });
       setIsReady(true);
     }
-  }, [playerId, roomCode, isEliminated]);
+  }, [playerId, roomCode, isEliminated, sendMessage]);
 
   const handleSpectatePlayer = useCallback((targetPlayerId: string) => {
     if (isEliminated || canSpectateWhileWaiting) {
-      send({
+      sendMessage({
         type: 'spectate_player',
         payload: { targetPlayerId }
       });
@@ -448,7 +453,7 @@ export default function MultiplayerGamePage() {
       const targetPlayer = players.find(p => p.id === targetPlayerId);
       setSpectatingPlayerName(targetPlayer?.name || null);
     }
-  }, [isEliminated, canSpectateWhileWaiting, players]);
+  }, [isEliminated, canSpectateWhileWaiting, players, sendMessage]);
 
   const handleCardClick = useCallback((cardId: string) => {
     if (!gameState || gameState.phase !== 'playing' || isEliminated || hasFinishedRound) return;
@@ -572,7 +577,6 @@ export default function MultiplayerGamePage() {
   }, [gameState, selectedCardId, sendGameUpdate, sendRoundFinished, isEliminated, hasFinishedRound]);
 
   const handleGoHome = () => {
-    clearCredentials();
     setLocation("/");
   };
 

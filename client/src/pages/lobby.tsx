@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Copy, Users, Check, Crown, Play, Loader2, Link2 } from "lucide-react";
@@ -7,15 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  ensureConnected, 
-  send, 
-  addMessageHandler, 
-  setCredentials, 
-  clearCredentials,
-  isConnected,
-  resetReconnectAttempts
-} from "@/lib/ws";
+import { getSocket } from "@/network/socket";
 import type { MultiplayerRoom, MultiplayerPlayer } from "@shared/schema";
 
 function MagicalParticles() {
@@ -76,36 +68,10 @@ export default function LobbyPage() {
   const [roomCode, setRoomCode] = useState('');
   const [room, setRoom] = useState<MultiplayerRoom | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [wsConnected, setWsConnected] = useState(isConnected());
+  const [wsConnected, setWsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  const handleWSMessage = useCallback((message: { type: string; payload?: any }) => {
-    switch (message.type) {
-      case 'room_created':
-      case 'room_joined':
-        setRoom(message.payload.room);
-        setPlayerId(message.payload.playerId);
-        setCredentials(message.payload.playerId, message.payload.room.code);
-        setView('waiting');
-        setIsConnecting(false);
-        break;
-      case 'room_update':
-        setRoom(message.payload.room);
-        break;
-      case 'game_started':
-        setLocation(`/multiplayer-game?room=${message.payload.roomCode}&player=${message.payload.playerId}&seed=${message.payload.seed}&round=${message.payload.currentRound || 1}&totalRounds=${message.payload.totalRounds || 8}&roundTime=${message.payload.roundTimeLimit || 60}`);
-        break;
-      case 'error':
-        toast({
-          title: "Fehler",
-          description: message.payload.message,
-          variant: "destructive"
-        });
-        setIsConnecting(false);
-        break;
-    }
-  }, [setLocation, toast]);
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -115,20 +81,62 @@ export default function LobbyPage() {
       setView('joining');
     }
     
-    resetReconnectAttempts();
-    const removeHandler = addMessageHandler(handleWSMessage);
-    
-    const checkConnection = setInterval(() => {
-      setWsConnected(isConnected());
-    }, 1000);
-    
-    return () => {
-      removeHandler();
-      clearInterval(checkConnection);
-    };
-  }, [handleWSMessage]);
+    const socket = getSocket();
+    socketRef.current = socket;
 
-  const handleCreateRoom = async () => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = JSON.parse(event.data);
+      switch (message.type) {
+        case 'room_created':
+        case 'room_joined':
+          setRoom(message.payload.room);
+          setPlayerId(message.payload.playerId);
+          setView('waiting');
+          setIsConnecting(false);
+          break;
+        case 'room_update':
+          setRoom(message.payload.room);
+          break;
+        case 'game_started':
+          setLocation(`/multiplayer-game?room=${message.payload.roomCode}&player=${message.payload.playerId}&seed=${message.payload.seed}&round=${message.payload.currentRound || 1}&totalRounds=${message.payload.totalRounds || 10}&roundTime=${message.payload.roundTimeLimit || 60}`);
+          break;
+        case 'error':
+          toast({
+            title: "Fehler",
+            description: message.payload.message,
+            variant: "destructive"
+          });
+          setIsConnecting(false);
+          break;
+      }
+    };
+
+    const handleOpen = () => setWsConnected(true);
+    const handleClose = () => setWsConnected(false);
+
+    socket.addEventListener('message', handleMessage);
+    socket.addEventListener('open', handleOpen);
+    socket.addEventListener('close', handleClose);
+    
+    if (socket.readyState === WebSocket.OPEN) {
+      setWsConnected(true);
+    }
+
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+      socket.removeEventListener('open', handleOpen);
+      socket.removeEventListener('close', handleClose);
+    };
+  }, [setLocation, toast]);
+
+  const sendMessage = (msg: object) => {
+    const socket = socketRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(msg));
+    }
+  };
+
+  const handleCreateRoom = () => {
     if (!playerName.trim()) {
       toast({
         title: "Name erforderlich",
@@ -139,23 +147,13 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
-    try {
-      await ensureConnected();
-      send({
-        type: 'create_room',
-        payload: { playerName: playerName.trim() }
-      });
-    } catch (e) {
-      toast({
-        title: "Verbindungsfehler",
-        description: "Konnte keine Verbindung zum Server herstellen.",
-        variant: "destructive"
-      });
-      setIsConnecting(false);
-    }
+    sendMessage({
+      type: 'create_room',
+      payload: { playerName: playerName.trim() }
+    });
   };
 
-  const handleJoinRoom = async () => {
+  const handleJoinRoom = () => {
     if (!playerName.trim()) {
       toast({
         title: "Name erforderlich",
@@ -175,45 +173,34 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
-    try {
-      await ensureConnected();
-      send({
-        type: 'join_room',
-        payload: { 
-          playerName: playerName.trim(),
-          roomCode: roomCode.toUpperCase().trim()
-        }
-      });
-    } catch (e) {
-      toast({
-        title: "Verbindungsfehler",
-        description: "Konnte keine Verbindung zum Server herstellen.",
-        variant: "destructive"
-      });
-      setIsConnecting(false);
-    }
+    sendMessage({
+      type: 'join_room',
+      payload: { 
+        playerName: playerName.trim(),
+        roomCode: roomCode.toUpperCase().trim()
+      }
+    });
   };
 
   const handleToggleReady = () => {
-    send({
+    sendMessage({
       type: 'set_ready',
       payload: { playerId }
     });
   };
 
   const handleStartGame = () => {
-    send({
+    sendMessage({
       type: 'start_game',
       payload: { playerId }
     });
   };
 
   const handleLeaveRoom = () => {
-    send({
+    sendMessage({
       type: 'leave_room',
       payload: { playerId }
     });
-    clearCredentials();
     setRoom(null);
     setPlayerId(null);
     setView('menu');
