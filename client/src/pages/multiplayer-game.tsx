@@ -160,12 +160,12 @@ export default function MultiplayerGamePage() {
     const socket = getSocket();
     socketRef.current = socket;
 
-    const handleMessage = (event: MessageEvent) => {
+    socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
       handleWSMessage(message);
     };
 
-    const handleOpen = () => {
+    socket.onopen = () => {
       setWsConnected(true);
       socket.send(JSON.stringify({
         type: 'rejoin_game',
@@ -173,11 +173,7 @@ export default function MultiplayerGamePage() {
       }));
     };
 
-    const handleClose = () => setWsConnected(false);
-
-    socket.addEventListener('message', handleMessage);
-    socket.addEventListener('open', handleOpen);
-    socket.addEventListener('close', handleClose);
+    socket.onclose = () => setWsConnected(false);
 
     if (socket.readyState === WebSocket.OPEN) {
       setWsConnected(true);
@@ -188,9 +184,7 @@ export default function MultiplayerGamePage() {
     }
 
     return () => {
-      socket.removeEventListener('message', handleMessage);
-      socket.removeEventListener('open', handleOpen);
-      socket.removeEventListener('close', handleClose);
+      // NICHT socket.close() - Socket bleibt bestehen
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

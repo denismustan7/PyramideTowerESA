@@ -84,7 +84,7 @@ export default function LobbyPage() {
     const socket = getSocket();
     socketRef.current = socket;
 
-    const handleMessage = (event: MessageEvent) => {
+    socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
       switch (message.type) {
         case 'room_created':
@@ -111,21 +111,15 @@ export default function LobbyPage() {
       }
     };
 
-    const handleOpen = () => setWsConnected(true);
-    const handleClose = () => setWsConnected(false);
-
-    socket.addEventListener('message', handleMessage);
-    socket.addEventListener('open', handleOpen);
-    socket.addEventListener('close', handleClose);
+    socket.onopen = () => setWsConnected(true);
+    socket.onclose = () => setWsConnected(false);
     
     if (socket.readyState === WebSocket.OPEN) {
       setWsConnected(true);
     }
 
     return () => {
-      socket.removeEventListener('message', handleMessage);
-      socket.removeEventListener('open', handleOpen);
-      socket.removeEventListener('close', handleClose);
+      // NICHT socket.close() - Socket bleibt bestehen
     };
   }, [setLocation, toast]);
 
