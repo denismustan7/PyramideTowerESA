@@ -62,6 +62,142 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+// Difficulty types for random round variation
+type RoundDifficulty = 'easy' | 'normal' | 'hard';
+
+// Get difficulty level from seed (deterministic so all players get same difficulty)
+function getDifficultyFromSeed(seed: number): RoundDifficulty {
+  const difficultyRoll = (seed * 7919) % 100; // Prime number for better distribution
+  if (difficultyRoll < 25) return 'easy';      // 25% chance
+  if (difficultyRoll < 70) return 'normal';    // 45% chance
+  return 'hard';                                // 30% chance
+}
+
+// Get value index for a card (0-12, where 0=A, 12=K)
+function getCardValueIndex(card: Card): number {
+  return CARD_VALUES.indexOf(card.value);
+}
+
+// Check if two cards are adjacent in value (can be played consecutively)
+function areCardsAdjacent(card1: Card, card2: Card): boolean {
+  const idx1 = getCardValueIndex(card1);
+  const idx2 = getCardValueIndex(card2);
+  const diff = Math.abs(idx1 - idx2);
+  return diff === 1 || diff === 12; // Adjacent or A-K wrap
+}
+
+// Adjust deck based on difficulty - modifies card arrangement after shuffle
+function adjustDeckForDifficulty(deck: Card[], seed: number, difficulty: RoundDifficulty): Card[] {
+  if (difficulty === 'normal') {
+    return deck; // No adjustment for normal difficulty
+  }
+  
+  const adjusted = [...deck];
+  const random = seededRandom(seed ^ 0xDEADBEEF); // Different seed for adjustments
+  
+  // Cards 0-29 go to pyramid (bottom row is indices 6-9, 16-19, 26-29 for each tower)
+  // Bottom row = playable cards at start
+  const bottomRowIndices = [6, 7, 8, 9, 16, 17, 18, 19, 26, 27, 28, 29]; // 12 cards
+  const otherPyramidIndices: number[] = [];
+  for (let i = 0; i < 30; i++) {
+    if (!bottomRowIndices.includes(i)) {
+      otherPyramidIndices.push(i);
+    }
+  }
+  
+  if (difficulty === 'easy') {
+    // EASY: Try to place cards that form sequences in the bottom row
+    // Find pairs of adjacent cards and put them in bottom row
+    const pyramidCards = adjusted.slice(0, 30);
+    const usedIndices = new Set<number>();
+    
+    // Find all adjacent pairs
+    for (let i = 0; i < pyramidCards.length; i++) {
+      if (usedIndices.has(i)) continue;
+      
+      for (let j = i + 1; j < pyramidCards.length; j++) {
+        if (usedIndices.has(j)) continue;
+        
+        if (areCardsAdjacent(pyramidCards[i], pyramidCards[j])) {
+          // Check if we can put both in bottom row
+          const availableBottomSlots = bottomRowIndices.filter(idx => !usedIndices.has(idx));
+          const availableOtherSlots = otherPyramidIndices.filter(idx => !usedIndices.has(idx));
+          
+          if (availableBottomSlots.length >= 2) {
+            // Swap these cards into bottom row
+            const currentPosI = i;
+            const currentPosJ = j;
+            const targetPosI = availableBottomSlots[0];
+            const targetPosJ = availableBottomSlots[1];
+            
+            if (currentPosI !== targetPosI && !usedIndices.has(targetPosI)) {
+              [adjusted[currentPosI], adjusted[targetPosI]] = [adjusted[targetPosI], adjusted[currentPosI]];
+            }
+            if (currentPosJ !== targetPosJ && !usedIndices.has(targetPosJ)) {
+              [adjusted[currentPosJ], adjusted[targetPosJ]] = [adjusted[targetPosJ], adjusted[currentPosJ]];
+            }
+            
+            usedIndices.add(targetPosI);
+            usedIndices.add(targetPosJ);
+            
+            // Only do a few swaps to keep some randomness
+            if (usedIndices.size >= 6) break;
+          }
+        }
+      }
+      if (usedIndices.size >= 6) break;
+    }
+  } else if (difficulty === 'hard') {
+    // HARD: Spread out adjacent cards - move sequences away from bottom row
+    const pyramidCards = adjusted.slice(0, 30);
+    let swapCount = 0;
+    const maxSwaps = 8;
+    
+    // For each card in bottom row, check if it has an adjacent card also in bottom row
+    for (let i = 0; i < bottomRowIndices.length && swapCount < maxSwaps; i++) {
+      const idx1 = bottomRowIndices[i];
+      const card1 = adjusted[idx1];
+      
+      for (let j = i + 1; j < bottomRowIndices.length && swapCount < maxSwaps; j++) {
+        const idx2 = bottomRowIndices[j];
+        const card2 = adjusted[idx2];
+        
+        if (areCardsAdjacent(card1, card2)) {
+          // Move one of them to a non-bottom position
+          const targetIdx = otherPyramidIndices[Math.floor(random() * otherPyramidIndices.length)];
+          [adjusted[idx2], adjusted[targetIdx]] = [adjusted[targetIdx], adjusted[idx2]];
+          swapCount++;
+          break; // Only need to break one pair per card
+        }
+      }
+    }
+    
+    // Also check if discard card (index 30) has many matches in bottom row
+    // If so, swap some bottom row cards to make it harder
+    const discardCard = adjusted[30];
+    let matchesInBottom = 0;
+    for (const idx of bottomRowIndices) {
+      if (areCardsAdjacent(adjusted[idx], discardCard)) {
+        matchesInBottom++;
+      }
+    }
+    
+    // If too many matches, swap some away
+    if (matchesInBottom > 3 && swapCount < maxSwaps) {
+      for (const idx of bottomRowIndices) {
+        if (areCardsAdjacent(adjusted[idx], discardCard) && swapCount < maxSwaps) {
+          const targetIdx = otherPyramidIndices[Math.floor(random() * otherPyramidIndices.length)];
+          [adjusted[idx], adjusted[targetIdx]] = [adjusted[targetIdx], adjusted[idx]];
+          swapCount++;
+          if (swapCount >= 3) break; // Don't remove all matches
+        }
+      }
+    }
+  }
+  
+  return adjusted;
+}
+
 // Generate a deterministic bonus card based on seed, slot number, and activation count
 function generateBonusCard(gameSeed: number, slotNumber: 1 | 2, activationCount: number): Card {
   // Create a unique seed for this specific bonus card generation
@@ -208,16 +344,23 @@ export function initGame(level: number = 1, seed?: number): GameState {
   const deck = generateDeck();
   const shuffled = shuffleDeck(deck, gameSeed);
   
+  // Apply random difficulty adjustment based on seed
+  const difficulty = getDifficultyFromSeed(gameSeed);
+  const adjustedDeck = adjustDeckForDifficulty(shuffled, gameSeed, difficulty);
+  
+  // Log difficulty for debugging (can be removed later)
+  console.log(`[Game] Round difficulty: ${difficulty}`);
+  
   // First 30 cards go to the three towers
-  const tableauCards = shuffled.slice(0, TOTAL_TABLEAU_CARDS);
+  const tableauCards = adjustedDeck.slice(0, TOTAL_TABLEAU_CARDS);
   const { pyramid, towers } = createTriPeaksTowers(tableauCards);
   
   // Next card goes to discard pile (face up)
-  const discardCard = shuffled[TOTAL_TABLEAU_CARDS];
+  const discardCard = adjustedDeck[TOTAL_TABLEAU_CARDS];
   discardCard.isFaceUp = true;
   
   // Remaining 21 cards are the draw pile (52 - 30 - 1 = 21 cards)
-  const drawPile = shuffled.slice(TOTAL_TABLEAU_CARDS + 1);
+  const drawPile = adjustedDeck.slice(TOTAL_TABLEAU_CARDS + 1);
   
   // Calculate time based on level
   // Rounds 1-4: 60 seconds, Round 5+: decreases by 5 seconds per round
@@ -252,6 +395,11 @@ export function initGame(level: number = 1, seed?: number): GameState {
 // Initialize a new game with a specific seed (for multiplayer)
 export function initGameWithSeed(level: number, seed: number): GameState {
   return initGame(level, seed);
+}
+
+// Get the difficulty level for a given seed (for UI display)
+export function getRoundDifficulty(seed: number): 'easy' | 'normal' | 'hard' {
+  return getDifficultyFromSeed(seed);
 }
 
 // Get all playable cards from pyramid
