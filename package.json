@@ -4,14 +4,14 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-        "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-        "dev:server": "cd server && tsx watch index.ts",
-        "dev:client": "cd client && vite",
-        "build": "npm run build:client && npm run build:server",
-        "build:client": "cd client && vite build",
-        "build:server": "cd server && tsc",
-        "start": "node server/dist/index.js"
-   },
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && tsx watch index.ts",
+    "dev:client": "cd client && vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "cd client && vite build",
+    "build:server": "cd server && tsc",
+    "start": "node server/dist/index.js"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
@@ -94,6 +94,7 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.8",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
@@ -111,4 +112,3 @@
     "bufferutil": "^4.0.8"
   }
 }
-
