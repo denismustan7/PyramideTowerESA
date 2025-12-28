@@ -159,10 +159,12 @@ export default function LobbyPage() {
     try {
       const socket = await waitForConnection();
       socketRef.current = socket;
+      console.log('[Lobby] Sending create_room message');
       socket.send(JSON.stringify({
         type: 'create_room',
         payload: { playerName: playerName.trim() }
       }));
+      console.log('[Lobby] create_room message sent');
     } catch (error) {
       console.error('[Lobby] Connection failed:', error);
       toast({

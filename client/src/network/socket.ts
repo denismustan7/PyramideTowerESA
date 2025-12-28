@@ -12,6 +12,18 @@ export function getSocket(): WebSocket {
   
   socket = new WebSocket(wsUrl);
   
+  socket.onopen = () => {
+    console.log('[WebSocket] Connection opened');
+  };
+  
+  socket.onerror = (e) => {
+    console.error('[WebSocket] Connection error:', e);
+  };
+  
+  socket.onclose = (e) => {
+    console.log('[WebSocket] Connection closed:', e.code, e.reason);
+  };
+  
   return socket;
 }
 
@@ -19,7 +31,12 @@ export function waitForConnection(): Promise<WebSocket> {
   const sock = getSocket();
   
   if (sock.readyState === WebSocket.OPEN) {
+    console.log('[WebSocket] Already connected');
     return Promise.resolve(sock);
+  }
+  
+  if (sock.readyState === WebSocket.CONNECTING) {
+    console.log('[WebSocket] Waiting for connection...');
   }
   
   if (connectionPromise) {
@@ -28,10 +45,12 @@ export function waitForConnection(): Promise<WebSocket> {
   
   connectionPromise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
+      console.error('[WebSocket] Connection timeout after 10s');
       reject(new Error('WebSocket connection timeout'));
     }, 10000);
     
     const onOpen = () => {
+      console.log('[WebSocket] waitForConnection: Connection established');
       clearTimeout(timeout);
       sock.removeEventListener('open', onOpen);
       sock.removeEventListener('error', onError);
@@ -40,6 +59,7 @@ export function waitForConnection(): Promise<WebSocket> {
     };
     
     const onError = (e: Event) => {
+      console.error('[WebSocket] waitForConnection: Connection error');
       clearTimeout(timeout);
       sock.removeEventListener('open', onOpen);
       sock.removeEventListener('error', onError);
