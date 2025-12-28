@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { z } from "zod";
+import { addRun, getLeaderboard as getLeaderboardFromDb } from "./db";
 import { 
   getMultiplayerConfig, 
   getRoundTime, 
@@ -964,18 +965,59 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   }
 
-  // Global top 10 leaderboard (multiplayer only)
-  app.get("/api/leaderboard", (req, res) => {
-    const entries = storage.getLeaderboard(10);
-    res.json(entries);
+  // POST /api/run - Add a new run to SQLite database
+  const runSchema = z.object({
+    name: z.string().min(1).max(50),
+    points: z.number().int().min(0)
   });
 
+  app.post("/api/run", (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    const result = runSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: result.error.message 
+      });
+    }
+    
+    const { name, points } = result.data;
+    
+    try {
+      const entry = addRun(name, points);
+      res.json({ success: true, entry });
+    } catch (error) {
+      console.error('Error adding run:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Database error' 
+      });
+    }
+  });
+
+  // GET /api/leaderboard - Get top 10 from SQLite database
+  app.get("/api/leaderboard", (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    
+    try {
+      const entries = getLeaderboardFromDb(10);
+      res.json(entries);
+    } catch (error) {
+      console.error('Error getting leaderboard:', error);
+      res.status(500).json({ error: 'Database error' });
+    }
+  });
+
+  // Legacy: POST /api/leaderboard for in-memory leaderboard (deprecated)
   const submitScoreSchema = z.object({
     playerName: z.string().min(1).max(20),
     score: z.number().int().min(0)
   });
 
   app.post("/api/leaderboard", (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
     const result = submitScoreSchema.safeParse(req.body);
     
     if (!result.success) {
