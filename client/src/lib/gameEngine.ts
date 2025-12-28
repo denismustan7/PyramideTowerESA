@@ -68,9 +68,9 @@ type RoundDifficulty = 'easy' | 'medium' | 'hard';
 // Get difficulty level from seed (deterministic so all players get same difficulty)
 function getDifficultyFromSeed(seed: number): RoundDifficulty {
   const difficultyRoll = (seed * 7919) % 100; // Prime number for better distribution
-  if (difficultyRoll < 30) return 'easy';      // 30% chance
-  if (difficultyRoll < 65) return 'medium';    // 35% chance
-  return 'hard';                                // 35% chance
+  if (difficultyRoll < 15) return 'easy';      // 15% chance
+  if (difficultyRoll < 75) return 'medium';    // 60% chance
+  return 'hard';                                // 25% chance
 }
 
 // Get value index for a card (0-12, where 0=A, 12=K)
