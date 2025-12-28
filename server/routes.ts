@@ -516,7 +516,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             room.gameSeed = Date.now();
             room.roundSpeedWinnerId = null; // Reset for new game
 
-            for (const [playerId, p] of room.players) {
+            for (const [playerId, p] of Array.from(room.players.entries())) {
               p.score = 0;
               p.totalScore = 0;
               p.cardsRemaining = 30;
@@ -726,7 +726,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
                 room.status = 'playing';
                 room.roundSpeedWinnerId = null; // Reset speed bonus tracker for new round
 
-                for (const [playerId, p] of room.players) {
+                for (const [playerId, p] of Array.from(room.players.entries())) {
                   p.score = 0;
                   p.cardsRemaining = 30;
                   p.finished = false;
