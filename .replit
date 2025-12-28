@@ -4,7 +4,6 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["bash", "psmisc"]
 
 [[ports]]
 localPort = 5000
@@ -34,7 +33,7 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[workflows.workflow.tasks]
+[[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
