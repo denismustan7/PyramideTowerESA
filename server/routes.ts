@@ -267,11 +267,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log(`[WebSocket] Received message: ${message.type}`, message.payload ? JSON.stringify(message.payload).substring(0, 100) : '');
         handleWSMessage(ws, message, currentPlayerId, currentRoomCode, (newPlayerId, newRoomCode) => {
           currentPlayerId = newPlayerId;
           currentRoomCode = newRoomCode;
         });
       } catch (e) {
+        console.error('[WebSocket] Error parsing message:', e);
         ws.send(JSON.stringify({ type: 'error', payload: { message: 'Invalid message format' } }));
       }
     });
