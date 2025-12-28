@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { getSocket, waitForConnection, setMessageHandler } from "@/network/socket";
+import { getSocket, waitForConnection, setMessageHandler, saveRoomSession, getRoomSession, clearRoomSession } from "@/network/socket";
 import type { MultiplayerRoom, MultiplayerPlayer } from "@shared/schema";
 
 function MagicalParticles() {
@@ -85,8 +85,35 @@ export default function LobbyPage() {
     if (joinCode) {
       setRoomCode(joinCode.toUpperCase());
       setView('joining');
+    } else {
+      // Check for saved session and try to rejoin
+      const session = getRoomSession();
+      if (session) {
+        addDebugLog(`Found session: ${session.roomCode}`);
+        setPlayerName(session.playerName);
+        setRoomCode(session.roomCode);
+        // Auto-rejoin after socket connects
+        const tryRejoin = async () => {
+          try {
+            const socket = await waitForConnection();
+            addDebugLog(`Attempting rejoin to ${session.roomCode}`);
+            socket.send(JSON.stringify({
+              type: 'rejoin_room',
+              payload: {
+                playerId: session.playerId,
+                roomCode: session.roomCode,
+                playerName: session.playerName
+              }
+            }));
+          } catch (e) {
+            addDebugLog(`Rejoin failed: ${e}`);
+            clearRoomSession();
+          }
+        };
+        tryRejoin();
+      }
     }
-  }, []);
+  }, [addDebugLog]);
   
   useEffect(() => {
     addDebugLog('Setting up message handler');
@@ -100,6 +127,12 @@ export default function LobbyPage() {
           setPlayerId(message.payload.playerId);
           setView('waiting');
           setIsConnecting(false);
+          // Save session for auto-rejoin
+          const myPlayer = message.payload.room.players.find((p: any) => p.id === message.payload.playerId);
+          if (myPlayer) {
+            saveRoomSession(message.payload.playerId, myPlayer.name, message.payload.room.code);
+            addDebugLog(`Session saved: ${message.payload.room.code}`);
+          }
           break;
         case 'room_update':
           setRoom(message.payload.room);
@@ -114,6 +147,11 @@ export default function LobbyPage() {
             variant: "destructive"
           });
           setIsConnecting(false);
+          // Clear session if room not found
+          if (message.payload.message === 'Raum nicht gefunden') {
+            clearRoomSession();
+            addDebugLog('Session cleared (room not found)');
+          }
           break;
       }
     };
@@ -236,6 +274,7 @@ export default function LobbyPage() {
       type: 'leave_room',
       payload: { playerId }
     });
+    clearRoomSession();
     setRoom(null);
     setPlayerId(null);
     setView('menu');

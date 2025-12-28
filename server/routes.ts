@@ -461,6 +461,90 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         break;
       }
 
+      case 'rejoin_room': {
+        // Rejoin existing room with same player ID (for reconnection after disconnect)
+        const { playerId: rejoinPlayerId, roomCode: rejoinRoomCode, playerName: rejoinPlayerName } = message.payload;
+        const rejoinRoom = rooms.get(rejoinRoomCode);
+        
+        if (!rejoinRoom) {
+          console.log(`[WS] Rejoin failed: Room ${rejoinRoomCode} not found`);
+          ws.send(JSON.stringify({
+            type: 'error',
+            payload: { message: 'Raum nicht gefunden' }
+          }));
+          return;
+        }
+        
+        const existingPlayer = rejoinRoom.players.get(rejoinPlayerId);
+        if (existingPlayer) {
+          // Player exists, update their websocket
+          existingPlayer.ws = ws;
+          setContext(rejoinPlayerId, rejoinRoomCode);
+          
+          console.log(`[WS] Player ${existingPlayer.name} rejoined room ${rejoinRoomCode}`);
+          
+          ws.send(JSON.stringify({
+            type: 'room_joined',
+            payload: { 
+              room: getRoomState(rejoinRoom),
+              playerId: rejoinPlayerId 
+            }
+          }));
+        } else {
+          // Player doesn't exist anymore, create new player in room if possible
+          if (rejoinRoom.status !== 'waiting') {
+            ws.send(JSON.stringify({
+              type: 'error',
+              payload: { message: 'Spiel bereits gestartet' }
+            }));
+            return;
+          }
+          
+          if (rejoinRoom.players.size >= rejoinRoom.maxPlayers) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              payload: { message: 'Raum ist voll' }
+            }));
+            return;
+          }
+          
+          // Create new player with new ID
+          const newPlayerId = generatePlayerId();
+          rejoinRoom.players.set(newPlayerId, {
+            id: newPlayerId,
+            name: rejoinPlayerName,
+            score: 0,
+            totalScore: 0,
+            cardsRemaining: 30,
+            isReady: false,
+            isHost: false,
+            finished: false,
+            isEliminated: false,
+            eliminatedInRound: null,
+            ws
+          });
+          
+          playerToRoom.set(newPlayerId, rejoinRoomCode);
+          setContext(newPlayerId, rejoinRoomCode);
+          
+          console.log(`[WS] Player ${rejoinPlayerName} joined room ${rejoinRoomCode} as new player (old session expired)`);
+          
+          ws.send(JSON.stringify({
+            type: 'room_joined',
+            payload: { 
+              room: getRoomState(rejoinRoom),
+              playerId: newPlayerId 
+            }
+          }));
+          
+          broadcastToRoom(rejoinRoom, {
+            type: 'room_update',
+            payload: { room: getRoomState(rejoinRoom) }
+          }, newPlayerId);
+        }
+        break;
+      }
+
       case 'leave_room': {
         if (currentPlayerId && currentRoomCode) {
           const room = rooms.get(currentRoomCode);

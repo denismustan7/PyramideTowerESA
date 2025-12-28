@@ -7,6 +7,39 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_DELAY = 2000;
 
+// Store room session for auto-rejoin
+interface RoomSession {
+  playerId: string;
+  playerName: string;
+  roomCode: string;
+  timestamp: number;
+}
+
+export function saveRoomSession(playerId: string, playerName: string, roomCode: string) {
+  const session: RoomSession = { playerId, playerName, roomCode, timestamp: Date.now() };
+  localStorage.setItem('pyramide_room_session', JSON.stringify(session));
+}
+
+export function getRoomSession(): RoomSession | null {
+  try {
+    const data = localStorage.getItem('pyramide_room_session');
+    if (!data) return null;
+    const session = JSON.parse(data) as RoomSession;
+    // Session expires after 5 minutes
+    if (Date.now() - session.timestamp > 5 * 60 * 1000) {
+      localStorage.removeItem('pyramide_room_session');
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+export function clearRoomSession() {
+  localStorage.removeItem('pyramide_room_session');
+}
+
 export function setMessageHandler(handler: (data: any) => void) {
   messageHandler = handler;
 }
