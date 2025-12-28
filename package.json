@@ -118,5 +118,3 @@
   "build:server": "cd server && tsc",
   "start": "node server/dist/index.js"
 }
-
-}
