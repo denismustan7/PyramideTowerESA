@@ -73,9 +73,26 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  
+  const addDebugLog = useCallback((msg: string) => {
+    setDebugLog(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
+  }, []);
+
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinCode = urlParams.get('join');
+    if (joinCode) {
+      setRoomCode(joinCode.toUpperCase());
+      setView('joining');
+    }
+  }, []);
+  
+  useEffect(() => {
+    addDebugLog('Setting up message handler');
+    
     const handleMessage = (message: any) => {
-      console.log('[Lobby] Received message:', message.type, message.payload);
+      addDebugLog(`Received: ${message.type}`);
       switch (message.type) {
         case 'room_created':
         case 'room_joined':
@@ -103,26 +120,20 @@ export default function LobbyPage() {
     
     setMessageHandler(handleMessage);
     
-    return () => {
-      setMessageHandler(() => {});
-    };
-  }, [setLocation, toast]);
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const joinCode = urlParams.get('join');
-    if (joinCode) {
-      setRoomCode(joinCode.toUpperCase());
-      setView('joining');
-    }
-    
     const socket = getSocket();
     socketRef.current = socket;
     
     if (socket.readyState === WebSocket.OPEN) {
       setWsConnected(true);
+      addDebugLog('Socket already open');
+    } else {
+      addDebugLog(`Socket state: ${socket.readyState}`);
     }
-  }, []);
+    
+    return () => {
+      setMessageHandler(() => {});
+    };
+  }, [setLocation, toast, addDebugLog]);
 
   const sendMessage = (msg: object) => {
     const socket = socketRef.current;
@@ -142,18 +153,19 @@ export default function LobbyPage() {
     }
 
     setIsConnecting(true);
+    addDebugLog('Connecting...');
     
     try {
       const socket = await waitForConnection();
       socketRef.current = socket;
-      console.log('[Lobby] Sending create_room message');
+      addDebugLog(`Connected, state: ${socket.readyState}`);
       socket.send(JSON.stringify({
         type: 'create_room',
         payload: { playerName: playerName.trim() }
       }));
-      console.log('[Lobby] create_room message sent');
+      addDebugLog('create_room sent');
     } catch (error) {
-      console.error('[Lobby] Connection failed:', error);
+      addDebugLog(`Error: ${error}`);
       toast({
         title: "Verbindungsfehler",
         description: "Konnte keine Verbindung zum Server herstellen.",
@@ -558,6 +570,14 @@ export default function LobbyPage() {
           )}
         </AnimatePresence>
       </motion.div>
+      
+      {/* Debug Panel */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black/90 text-xs text-green-400 p-2 font-mono max-h-32 overflow-y-auto z-50">
+        <div className="font-bold text-yellow-400 mb-1">Debug Log:</div>
+        {debugLog.map((log, i) => (
+          <div key={i}>{log}</div>
+        ))}
+      </div>
     </div>
   );
 }
